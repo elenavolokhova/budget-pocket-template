@@ -1,0 +1,1909 @@
+<!doctype html><html lang="uk"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#17161A"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><meta name="apple-mobile-web-app-title" content="Бюджет"><meta name="robots" content="noindex,nofollow"><link rel="manifest" href="manifest.webmanifest"><link rel="icon" href="icon-192.png"><link rel="apple-touch-icon" href="apple-touch-icon.png"><style>[hidden]{display:none!important}body{margin:0}</style></head><body><title>Бюджет</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: sticky filter bar over a single column of tabbed panels; summary first, detail below.
+   Palette: warm paper + sage in light, ink + brass in dark. Muted earth series. */
+:root{
+  --bg:#F4F1EA; --surface:#FBF9F4; --surface-2:#EAE5DA; --ink:#2A2724; --ink-2:#4E4841; --muted:#675F55; --line:#D9D3C6;
+  --accent:#46523E; --accent-ink:#FFFFFF; --accent-soft:#E4E6DC; --accent-2:#6F7D65;
+  --good:#5E7052; --good-soft:#E3E7DC; --good-strong:#5E7052; --on-strong:#FFFFFF;
+  --warn:#C9863A; --warn-soft:#F0E7D6; --crit:#A84848; --crit-soft:#F2E1DD; --over-soft:#7F98B5; --ok:#6E8C5C;
+  --s1:#3F7F79; --s2:#C08A3E; --s3:#8A6A9A; --s4:#5F7D52; --s5:#B56A7E; --s6:#4F5F8F; --s7:#9A7B5B; --s0:#BEB6A8; --s0b:#958C80;
+  --f-display:"Golos Text",system-ui,-apple-system,"Segoe UI",sans-serif; --f-body:"Golos Text",system-ui,-apple-system,"Segoe UI",sans-serif; --f-mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+  --r:10px;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#17161A; --surface:#1F1D23; --surface-2:#26232B; --ink:#EDE7DC; --ink-2:#D3CCC0; --muted:#A8A197; --line:#3A3640;
+  --accent:#B79C62; --accent-ink:#17161A; --accent-soft:#2B2720; --accent-2:#B79C62;
+  --good:#A9BC9C; --good-soft:#232821; --good-strong:#A9BC9C; --on-strong:#17161A;
+  --warn:#E5A35A; --warn-soft:#2D271F; --crit:#E07474; --crit-soft:#332223; --over-soft:#8DA9CC; --ok:#9DBE87;
+  --s1:#6FA37D; --s2:#D8A7B8; --s3:#7790C6; --s4:#C9A867; --s5:#A897D8; --s6:#E2AE86; --s7:#5BA7A0; --s0:#514B5C; --s0b:#6E6A74; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#17161A; --surface:#1F1D23; --surface-2:#26232B; --ink:#EDE7DC; --ink-2:#D3CCC0; --muted:#A8A197; --line:#3A3640;
+  --accent:#B79C62; --accent-ink:#17161A; --accent-soft:#2B2720; --accent-2:#B79C62;
+  --good:#A9BC9C; --good-soft:#232821; --good-strong:#A9BC9C; --on-strong:#17161A;
+  --warn:#E5A35A; --warn-soft:#2D271F; --crit:#E07474; --crit-soft:#332223; --over-soft:#8DA9CC; --ok:#9DBE87;
+  --s1:#6FA37D; --s2:#D8A7B8; --s3:#7790C6; --s4:#C9A867; --s5:#A897D8; --s6:#E2AE86; --s7:#5BA7A0; --s0:#514B5C; --s0b:#6E6A74; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.5}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--surface)}
+.wrap{max-width:1180px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+h1,h2,h3{font-family:var(--f-display);font-weight:600;text-wrap:balance;margin:0;letter-spacing:-.01em}
+h1{font-size:1.35rem}
+h2{font-size:1.05rem}
+h3{font-size:.92rem;font-weight:500}
+p{margin:0}
+.num,td.n,.mono{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+.eyebrow{font-size:.72rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:500}
+.muted{color:var(--muted)}
+a{color:var(--accent)}
+button,select,input{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+/* header */
+header.top{background:var(--surface);border-bottom:1px solid var(--line);position:sticky;top:env(safe-area-inset-top,0px);z-index:5}
+.head-row{display:flex;flex-wrap:wrap;align-items:center;gap:10px 18px;padding-block:14px 10px}
+.head-row .sub{font-size:.8rem;color:var(--muted)}
+.filters{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-left:auto}
+.ctl{display:flex;align-items:center;gap:6px;background:var(--surface-2);border:1px solid var(--line);border-radius:8px;padding:4px 8px;font-size:.85rem}
+.ctl select,.ctl input{background:transparent;border:0;padding:2px 0;min-width:0}
+.ctl input[type=month]{width:8.5em}
+.ctl label{color:var(--muted)}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:var(--surface-2)}
+.seg button{border:0;background:transparent;padding:5px 10px;font-size:.85rem;font-weight:500;cursor:pointer;color:var(--ink-2)}
+.seg button[aria-pressed=true]{background:var(--accent);color:var(--accent-ink)}
+.chk{display:flex;gap:6px;align-items:center;font-size:.85rem;color:var(--ink-2)}
+nav.tabs{display:flex;gap:2px;overflow-x:auto;scrollbar-width:none}
+nav.tabs::-webkit-scrollbar{display:none}
+nav.tabs a{padding:9px 14px;text-decoration:none;color:var(--ink-2);border-bottom:2px solid transparent;white-space:nowrap;font-weight:500;font-size:.92rem}
+nav.tabs a[aria-current=page]{color:var(--accent);border-color:var(--accent)}
+
+main{padding-block:22px 60px}
+section.panel{display:grid;gap:18px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:18px;min-width:0}
+.card-head{display:flex;flex-wrap:wrap;gap:6px 14px;align-items:baseline;justify-content:space-between;margin-bottom:12px}
+.grid-2{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:18px}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
+.kpi{background:var(--surface);padding:16px 18px;display:grid;gap:4px;align-content:start}
+.kpi .v{font-family:var(--f-display);font-size:1.55rem;font-weight:500;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+.kpi .d{font-size:.82rem;color:var(--ink-2)}
+.grp-stats{grid-template-columns:repeat(4,minmax(0,1fr))}@media(max-width:640px){.grp-stats{grid-template-columns:repeat(2,minmax(0,1fr))}}.grp-stats .kpi{padding:12px 14px}.grp-stats .kpi .v{font-size:1.25rem}.grp-stats .kpi .l{font-size:.75rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+.chart-box{position:relative;height:300px}
+.chart-box.tall{height:420px}
+.pill{display:inline-flex;align-items:center;gap:5px;padding:2px 9px;border-radius:99px;font-size:.78rem;font-weight:500;white-space:nowrap}
+.pill.good{background:var(--good-soft);color:var(--good)}
+.pill.warn{background:var(--warn-soft);color:var(--warn)}
+.pill.crit{background:var(--crit-soft);color:var(--crit)}
+.pill.neutral{background:var(--surface-2);color:var(--ink-2)}
+.tbl-wrap{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:.88rem}
+th{text-align:left;font-weight:500;color:var(--muted);font-size:.75rem;text-transform:uppercase;letter-spacing:.06em;padding:8px 10px;border-bottom:1px solid var(--line);white-space:nowrap}
+td{padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+td.n,th.n{text-align:right;white-space:nowrap}
+tr:last-child td{border-bottom:0}
+tr.sumrow td{border-top:1px solid var(--ink-2)}
+tr.grp td{color:var(--muted);font-size:.75rem;text-transform:uppercase;letter-spacing:.06em;padding-top:16px}
+tbody tr:hover td{background:var(--surface-2)}
+.btn{background:var(--surface-2);border:1px solid var(--line);border-radius:8px;padding:7px 13px;cursor:pointer;font-weight:500;font-size:.88rem}
+.btn:hover{border-color:var(--ink-2)}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.btn:disabled{opacity:.5;cursor:default}
+.row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.note{font-size:.84rem;color:var(--ink-2)}
+.swatch{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:6px;vertical-align:-1px}
+
+/* budget */
+.bud-sum{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:14px}
+.bud-sum .v{font-family:var(--f-display);font-size:1.3rem;font-weight:500;font-variant-numeric:tabular-nums}
+.meter{position:relative;height:10px;border-radius:99px;background:color-mix(in srgb,var(--ink) 9%,var(--surface));overflow:visible}
+.meter .fill{position:absolute;inset:0 auto 0 0;border-radius:99px;background:var(--ok)}
+.meter .fill.soft{background:var(--over-soft)}
+.meter .fill.warn{background:var(--warn)}
+.meter .fill.crit{background:var(--crit)}
+.meter .pace{position:absolute;top:-3px;bottom:-3px;width:2px;background:var(--ink);opacity:.55;border-radius:1px}
+.meter.big{height:14px}
+.brow{display:grid;grid-template-columns:minmax(140px,1fr) minmax(180px,2.6fr) 7.5em;gap:4px 18px;align-items:start;padding:12px 0;border-bottom:1px solid var(--line)}
+.brow:last-child{border-bottom:0}
+.brow .nm{font-weight:500;padding-top:1px}
+.brow .nm small{display:block;font-weight:400;color:var(--muted);font-size:.76rem;font-family:var(--f-mono)}
+.brow .meter{margin-top:5px;background:var(--good-soft)}
+.brow .meter.nob{background:var(--surface-2)}
+.brow .under{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:7px;font-size:.84rem;color:var(--ink-2);font-variant-numeric:tabular-nums}
+.brow .under b{font-family:var(--f-mono);font-weight:500;color:var(--ink)}
+.left-pill{font-family:var(--f-mono);font-weight:500;padding:3px 10px;border-radius:6px;white-space:nowrap;font-size:.84rem}
+.left-pill.ok{background:var(--ok);color:var(--on-strong)}
+.left-pill.over{background:color-mix(in srgb,var(--over-soft) 22%,var(--surface));color:var(--over-soft);border:1px solid color-mix(in srgb,var(--over-soft) 55%,var(--surface))}
+.left-pill.over.warn{background:var(--warn-soft);color:var(--warn);border-color:color-mix(in srgb,var(--warn) 45%,var(--surface))}
+.left-pill.over.crit{background:var(--crit-soft);color:var(--crit);border-color:color-mix(in srgb,var(--crit) 45%,var(--surface))}
+.left-pill.none{background:var(--surface-2);color:var(--ink-2)}
+.bamt{justify-self:end;text-align:right}
+.bedit{font-family:var(--f-display);font-size:1rem;font-weight:500;font-variant-numeric:tabular-nums;background:transparent;border:1px dashed transparent;border-radius:6px;padding:1px 6px;cursor:pointer;color:var(--ink)}
+.bedit:hover{border-color:var(--line);background:var(--surface-2)}
+.bedit.empty{font-family:var(--f-body);font-size:.82rem;color:var(--accent)}
+.bamt input{width:6.5em;text-align:right;font-family:var(--f-mono);background:var(--surface);border:1px solid var(--accent);border-radius:6px;padding:3px 6px}
+.bamt .hint{display:block;font-size:.7rem;color:var(--muted)}
+.brow.total{border-bottom:1px solid var(--line);padding-top:0;margin-bottom:4px}
+.brow.total .meter{height:14px}
+.brow.total .bedit{font-size:1.25rem;cursor:default}
+@media (max-width:640px){.brow{grid-template-columns:1fr auto}.brow .barcol{grid-column:1/-1;order:3}}
+.afford{display:grid;gap:12px;align-content:start}
+.afford .answer{padding:12px 14px;border-radius:8px;font-size:.93rem}
+.answer.good{background:var(--good-soft);color:var(--ink)}
+.answer.warn{background:var(--warn-soft);color:var(--ink)}
+.answer.crit{background:var(--crit-soft);color:var(--ink)}
+.answer b{font-weight:600}
+.editor{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:8px 18px}
+.ed{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:6px 0;border-bottom:1px dashed var(--line);font-size:.9rem}
+.ed input{width:6.5em;flex:none;text-align:right;font-family:var(--f-mono);background:var(--surface-2);border:1px solid var(--line);border-radius:6px;padding:4px 6px}
+.ed small{color:var(--muted);font-family:var(--f-mono);font-size:.75rem}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{border:1px solid var(--line);background:var(--surface);border-radius:99px;padding:4px 11px;font-size:.82rem;cursor:pointer}
+.chip[aria-pressed=true]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.chip[aria-pressed=true] .muted{color:inherit;opacity:.72}
+.cur{font-family:var(--f-mono);font-size:.72rem;padding:1px 5px;border-radius:4px;background:var(--surface-2);color:var(--ink-2);margin-left:4px}
+.prose{max-width:72ch;display:grid;gap:12px}
+.prose h3{margin-top:10px;font-size:1rem}
+.prose ul,.prose ol{margin:0;padding-left:1.2em;display:grid;gap:6px}
+.prose b{font-weight:600}
+.drop{border:2px dashed var(--line);border-radius:var(--r);padding:26px;text-align:center;display:grid;gap:8px;justify-items:center}
+.drop.over{border-color:var(--accent);background:var(--accent-soft)}
+.status-line{font-size:.82rem;color:var(--ink-2)}
+.loading{padding:40px 0;color:var(--muted)}
+.off{display:none!important}
+section.pk{max-width:560px;margin:0 auto;padding-bottom:84px}
+#pkMain{display:grid;gap:14px}
+.pk-wnote{margin:-6px 2px 0}
+.pk-wants{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.pk-w{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:12px;display:grid;gap:2px;min-width:0;text-align:left;cursor:pointer;font:inherit;color:inherit}
+.pk-w:hover{border-color:var(--accent)}
+.pk-w .tap{font-size:.74rem;color:var(--accent);margin-top:4px}
+.pk-tags{display:flex;flex-wrap:wrap;gap:6px}
+.setup-row{gap:8px;align-items:center;margin:6px 0;flex-wrap:nowrap}.setup-row input[type=text],.setup-row select{min-width:0;flex:1;background:var(--surface-2);border:1px solid var(--line);border-radius:8px;padding:7px 9px;color:var(--ink);font:inherit}.setup-row select{flex:0 0 5.5em}.setup-row input[data-f=start]{flex:0 0 7em;text-align:right;font-family:var(--f-mono)}
+.pk-goal{grid-column:1/-1;display:block;color:var(--muted);font-size:.78rem;margin-top:2px}
+.pk-mnav{display:flex;align-items:center;gap:6px}
+.pk-arrow{border:1px solid var(--line);background:var(--surface-2);border-radius:8px;width:30px;height:30px;font-size:1.1rem;line-height:1;cursor:pointer;color:var(--ink)}
+.pk-arrow:disabled{opacity:.35;cursor:default}
+.pk-sec{font-size:.72rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);padding:12px 0 2px}
+.pk-tagsearch{position:relative;flex:1 1 160px;min-width:140px}
+.pk-tagsearch input{width:100%;border:1px solid var(--line);background:var(--surface-2);border-radius:99px;padding:6px 12px;font-size:.85rem;color:var(--ink)}
+.pk-dd{position:absolute;left:0;right:0;top:calc(100% + 4px);z-index:5;background:var(--surface);border:1px solid var(--line);border-radius:10px;box-shadow:0 8px 24px color-mix(in srgb,var(--ink) 18%,transparent);max-height:240px;overflow:auto;padding:4px}
+.pk-dd button{display:block;width:100%;text-align:left;border:0;background:transparent;padding:8px 10px;border-radius:6px;font-size:.88rem;cursor:pointer;color:var(--ink)}
+.pk-dd button:hover,.pk-dd button:focus{background:var(--surface-2)}
+.pk-dd button.new{color:var(--accent);font-weight:500}
+.pk-alloc input{width:6.5em;text-align:right;font-family:var(--f-mono);background:var(--surface-2);border:1px solid var(--line);border-radius:6px;padding:3px 6px;color:var(--ink)}
+.pk-fold summary{display:flex;justify-content:space-between;align-items:baseline;gap:10px;cursor:pointer;list-style:none}
+.pk-fold summary::-webkit-details-marker{display:none}
+.pk-fold summary h2::after{content:" ▾";font-size:.8em;color:var(--muted)}
+.pk-fold[open] summary h2::after{content:" ▴"}
+.pk-fold[open] summary{margin-bottom:10px}
+.pk-alloc{display:grid;gap:10px}
+.pk-alloc .row{justify-content:space-between}
+.pk-alloc ul{margin:0;padding:0;list-style:none;display:grid;gap:4px;font-size:.88rem}
+.pk-alloc li{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.pk-alloc li span:last-child{font-family:var(--f-mono)}
+.pk-alltags{display:flex;flex-wrap:wrap;gap:6px;max-height:220px;overflow:auto;padding:6px 0}
+.pk-tags button{border:1px dashed var(--line);background:transparent;border-radius:99px;padding:4px 10px;font-size:.8rem;cursor:pointer;color:var(--ink-2)}
+.pk-tags button[aria-pressed=true]{border-style:solid;border-color:var(--accent);color:var(--accent);background:var(--accent-soft)}
+.pk-tags input{border:1px dashed var(--line);background:transparent;border-radius:99px;padding:4px 10px;font-size:.8rem;width:9em;color:var(--ink)}
+.pk-hint{font-size:.84rem;padding:8px 10px;border-radius:8px;background:var(--accent-soft);color:var(--ink-2)}
+.pk-w .who{font-size:.78rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.pk-w .v{font-family:var(--f-display);font-size:1.45rem;font-weight:500;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+.pk-w .v.neg{color:var(--warn)}
+.pk-w small{font-size:.76rem;color:var(--ink-2);font-variant-numeric:tabular-nums}
+.pk-wnote{margin:8px 2px 0}
+.pk-li{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 10px;padding:8px 0;border-bottom:1px solid var(--line);align-items:center}
+.pk-li:last-child{border-bottom:0}
+.pk-li .nm{font-weight:500;font-size:.92rem;min-width:0;overflow:hidden;text-overflow:ellipsis}
+.pk-li .nm small{display:block;font-weight:400;color:var(--muted);font-size:.76rem}
+.pk-li .fig{font-family:var(--f-mono);font-variant-numeric:tabular-nums;font-size:.88rem;text-align:right;white-space:nowrap}
+.pk-li .fig small{display:block;color:var(--muted);font-size:.74rem}
+.pk-li .meter{grid-column:1/-1;height:5px;background:var(--surface-2)}
+.pk-li .acts{display:flex;gap:10px;justify-content:flex-end}
+.pk-bar{position:fixed;left:0;right:0;bottom:0;z-index:6;display:flex;gap:8px;justify-content:center;padding:10px max(16px,env(safe-area-inset-right,0px)) calc(10px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));background:var(--surface);border-top:1px solid var(--line)}
+.pk-bar .btn{padding:10px 16px;font-size:.95rem}
+.pk-bar .pk-add{flex:1;max-width:260px}
+.pk-sheet{position:fixed;inset:0;z-index:20;background:color-mix(in srgb,var(--ink) 40%,transparent);display:flex;align-items:flex-end;justify-content:center}
+.pk-form{background:var(--surface);width:100%;max-width:560px;max-height:92%;overflow-y:auto;overflow-x:hidden;grid-template-columns:minmax(0,1fr);border-radius:16px 16px 0 0;padding:16px max(16px,env(safe-area-inset-right,0px)) calc(16px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));display:grid;gap:12px}
+.pk-form>*{min-width:0}
+.pk-form-head{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.pk-form-head .seg{flex:1;max-width:330px}
+.pk-who{width:100%}
+.pk-amt{display:flex;align-items:baseline;gap:8px;border-bottom:2px solid var(--accent);padding:4px 0}
+.pk-amt span{font-size:.8rem;color:var(--muted)}
+.pk-amt input{flex:1;min-width:0;border:0;background:transparent;font-family:var(--f-display);font-size:2rem;font-weight:500;text-align:right;color:var(--ink)}
+.pk-amt input:focus{outline:none}
+.pk-amt b{font-family:var(--f-mono);font-weight:500;color:var(--ink-2)}
+.pk-row{display:grid;grid-template-columns:7.5em minmax(0,1fr) auto;gap:8px;align-items:center;font-size:.9rem}
+.pk-row label{color:var(--ink-2)}
+.pk-row input,.pk-row select,#pkCatAll{width:100%;background:var(--surface-2);border:1px solid var(--line);border-radius:8px;padding:8px 10px;font-size:1rem}
+.pk-row b{font-family:var(--f-mono);font-weight:500;color:var(--ink-2)}
+.pk-lbl{font-size:.8rem;color:var(--muted);margin-bottom:6px}
+.pk-cats{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}
+.pk-cats button{border:1px solid var(--line);background:var(--surface);border-radius:99px;padding:6px 11px;font-size:.86rem;cursor:pointer}
+.pk-cats button[aria-pressed=true]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.pk-who{display:flex}
+.pk-who button,.pk-form-head .seg button{flex:1;padding:8px 12px}
+.pk-save{padding:12px;font-size:1rem}
+@media (max-width:420px){.pk-w .v{font-size:1.2rem}.pk-wants{gap:6px}.pk-w{padding:10px 8px}}
+table.buckets td,table.buckets th{vertical-align:middle}
+table.buckets .bk{display:flex;gap:10px;align-items:flex-start}
+table.buckets .bk i{flex:none;width:12px;height:12px;border-radius:3px;margin-top:4px}
+table.buckets .bk small{display:block;color:var(--muted);font-size:.76rem;max-width:34ch}
+table.buckets td.n small{display:block;color:var(--muted);font-size:.74rem}
+table.buckets input{width:6.5em;text-align:right;font-family:var(--f-mono);background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:3px 6px}
+table.buckets tr.total td{border-top:1px solid var(--ink-2);font-weight:500}
+.bmeter{position:relative;height:6px;border-radius:99px;background:var(--surface-2);margin-top:4px;min-width:80px}
+.bmeter .band{position:absolute;top:0;bottom:0;background:color-mix(in srgb,var(--good) 30%,transparent);border-left:1px solid var(--good);border-right:1px solid var(--good)}
+.bmeter .dot{position:absolute;top:-3px;width:12px;height:12px;border-radius:50%;margin-left:-6px;border:2px solid var(--surface)}
+details.howto summary{cursor:pointer;font-weight:500;color:var(--accent)}
+.bucket-map{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:6px 18px;margin-top:10px}
+.bucket-map label{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:5px 0;border-bottom:1px dashed var(--line);font-size:.88rem}
+.bucket-map select{font-size:.82rem;background:var(--surface-2);border:1px solid var(--line);border-radius:6px;padding:2px 4px}
+.donut-wrap{display:grid;grid-template-columns:minmax(260px,420px) minmax(0,1fr);gap:24px;align-items:start}
+@media (max-width:820px){.donut-wrap{grid-template-columns:1fr}}
+.donut-box{display:grid;gap:8px;justify-items:center;position:sticky;top:120px}
+@media (max-width:820px){.donut-box{position:static}}
+#donut{width:100%;max-width:420px;height:auto;display:block;overflow:visible}
+#donut .sec{cursor:pointer}
+#donut .sec path{transition:opacity .15s}
+#donut.focus .sec:not(.on) path{opacity:.18}
+#donut text{font-family:var(--f-body);fill:var(--ink-2)}
+#donut .c1{font-family:var(--f-display);font-weight:500;fill:var(--ink)}
+.donut-key{display:flex;flex-wrap:wrap;gap:4px 12px;justify-content:center;align-items:center;font-size:.76rem}
+.donut-key span[class^=key]{display:inline-block;width:12px;height:10px;border-radius:2px;margin-right:-6px;vertical-align:-1px}
+.key-fill{background:var(--ok)}
+.key-track{background:color-mix(in srgb,var(--ok) 22%,var(--surface))}
+.key-pace{border-top:2px dashed var(--ink);height:0!important;width:14px!important;opacity:.6}
+.key-over{background:var(--over-soft)}
+.lg-row{display:grid;grid-template-columns:minmax(0,1.4fr) 6.2em minmax(0,1.6fr);gap:4px 12px;align-items:center;padding:7px 8px;border-radius:8px;cursor:default}
+.lg-row.on{background:var(--surface-2)}
+.lg-row .nm{font-weight:500;font-size:.9rem;min-width:0}
+.lg-row .nm small{display:block;font-weight:400;color:var(--muted);font-size:.74rem;font-family:var(--f-mono)}
+.lg-row input{width:100%;text-align:right;font-family:var(--f-mono);font-size:.9rem;background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:4px 6px}
+.lg-row input:hover{border-color:var(--ink-2)}
+.lg-row input:focus{border-color:var(--accent);outline:none}
+.lg-row .pr{display:grid;gap:4px;min-width:0}
+.lg-row .pr .meter{height:6px;background:var(--surface-2)}
+.lg-row .pr .line{display:flex;justify-content:space-between;gap:6px;font-size:.78rem;color:var(--ink-2);font-variant-numeric:tabular-nums;white-space:nowrap}
+.lg-row .pr .line b{font-family:var(--f-mono);font-weight:500;color:var(--ink)}
+.lg-row .left-pill{font-size:.74rem;padding:1px 7px}
+.lg-head{display:grid;grid-template-columns:minmax(0,1.4fr) 6.2em minmax(0,1.6fr);gap:12px;padding:0 8px 6px;font-size:.7rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.lg-sep{font-size:.7rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);padding:14px 8px 4px}
+@media (max-width:520px){.lg-row,.lg-head{grid-template-columns:minmax(0,1fr) 5.6em}.lg-row .pr{grid-column:1/-1}.lg-head span:last-child{display:none}}
+.linkbtn{background:none;border:0;padding:0;color:var(--accent);text-decoration:underline;cursor:pointer;font:inherit}
+select.spr{font-size:.78rem;background:var(--surface-2);border:1px solid var(--line);border-radius:6px;padding:2px 4px}
+@media (prefers-reduced-motion:no-preference){.meter .fill{transition:width .4s ease}}
+</style>
+
+<header class="top">
+  <div class="wrap">
+    <div class="head-row">
+      <div>
+        <h1 id="appTitle">Бюджет</h1>
+        <div class="sub" id="dataStamp">Завантажую дані…</div>
+      </div>
+      <div class="filters" id="globalFilters">
+        <div class="seg" role="group" aria-label="Валюта"><button id="cUSD" type="button">$ USD</button><button id="cEUR" type="button">€ EUR</button></div>
+        <div class="ctl"><label for="fPeriod">Період</label><select id="fPeriod"></select></div>
+        <div class="ctl" id="customRange" hidden><input type="month" id="fFrom" aria-label="З місяця"><span class="muted">—</span><input type="month" id="fTo" aria-label="По місяць"></div>
+        <div class="ctl"><label for="fPerson">Чиї</label><select id="fPerson"><option value="all">усі</option><option value="common">спільні</option></select></div>
+        <label class="chk"><input type="checkbox" id="fOneoff"> великі разові</label>
+        <label class="chk" title="Квартальні платежі та покупки про запас розподіляються за місяцями"><input type="checkbox" id="fSmooth" checked> згладжувати рідкісні платежі</label>
+      </div>
+    </div>
+    <nav class="tabs" aria-label="Розділи">
+      <a href="#pocket">Кишенька</a><a href="#overview">Огляд</a><a href="#budget">Бюджет</a><a href="#spending">Витрати</a><a href="#ops">Операції</a><a href="#advice">Як це працює</a><a href="#data">Дані</a>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+  <div id="errBox" class="answer crit" hidden style="margin-bottom:14px"></div>
+  <div class="card" id="offlineBanner" hidden style="margin-bottom:12px"><b>Локальна версія.</b> <span class="note">Дані зберігаються лише в цьому браузері на цьому пристрої. Раз на місяць завантажуйте резервну копію («Дані» → «Завантажити копію»): якщо очистити браузер, без неї дані зникнуть. Щоб вести бюджет удвох з різних телефонів, налаштуйте Firebase — див. SETUP.md.</span></div>
+  <div class="loading" id="loading">Завантажую операції…</div>
+
+  <!-- POCKET -->
+  <section class="panel pk" id="p-pocket" hidden>
+    <div id="pkOff" class="card prose" hidden></div>
+    <div id="pkMain">
+      <div class="pk-wants" id="pkWants"></div>
+      <p class="note pk-wnote" id="pkWantsNote"></p>
+      <div class="card pk-alloc" id="pkCloseCard" hidden></div>
+      <div class="card pk-alloc" id="pkAllocCard"></div>
+      <div class="card">
+        <div class="card-head"><div class="pk-mnav"><button type="button" class="pk-arrow" id="pkPrev" aria-label="Попередній місяць">‹</button><h2 id="pkMonthTitle">Місяць</h2><button type="button" class="pk-arrow" id="pkNext" aria-label="Наступний місяць">›</button></div><span class="note" id="pkMonthNote"></span></div>
+        <div id="pkMonth"></div>
+      </div>
+      <details class="card pk-fold" id="pkFundsBox">
+        <summary><h2>Фонди</h2><span class="note" id="pkFundsTotal"></span></summary>
+        <div id="pkFunds"></div>
+      </details>
+      <details class="card pk-fold" id="pkAcctsBox">
+        <summary><h2>Рахунки</h2><span class="note" id="pkAcctTotal"></span></summary>
+        <div id="pkAccts"></div>
+      </details>
+      <div class="card">
+        <div class="card-head"><h2>Останні операції</h2><span class="note">з «Кишеньки»</span></div>
+        <div id="pkRecent"></div>
+      </div>
+      <p class="note" id="pkBackupNote" style="text-align:center;margin:4px 0 0"></p>
+    </div>
+    <div class="pk-bar"><button class="btn primary pk-add" id="pkAdd" type="button">+ Витрата</button><button class="btn" id="pkAddInc" type="button">Дохід</button><button class="btn" id="pkAddTr" type="button">Переказ</button></div>
+    <div class="pk-sheet" id="pkSheet" hidden>
+      <form class="pk-form" id="pkForm" autocomplete="off">
+        <div class="pk-form-head"><div class="seg" role="group" aria-label="Тип операції"><button type="button" data-t="exp">Витрата</button><button type="button" data-t="inc">Дохід</button><button type="button" data-t="tr">Переказ</button></div><button type="button" class="linkbtn" id="pkClose">Закрити</button></div>
+        <label class="pk-amt"><span id="pkAmtLabel">Сума</span><input id="pkAmt" type="text" inputmode="decimal" step="0.01" min="0" placeholder="0" required><b id="pkAmtCur"></b></label>
+        <div class="pk-row" data-for="exp inc tr"><label for="pkAcct" id="pkAcctLabel">Рахунок</label><select id="pkAcct"></select></div>
+        <div class="pk-row" data-for="tr"><label for="pkAcct2">Куди</label><select id="pkAcct2"></select></div>
+        <div class="pk-row" data-for="tr" id="pkAmt2Row"><label for="pkAmt2">Надійшло</label><input id="pkAmt2" type="text" inputmode="decimal" step="0.01" min="0"><b id="pkAmt2Cur"></b></div>
+        <div class="pk-row" data-for="exp" id="pkEurRow"><label for="pkEur">У євро, якщо знаєте</label><input id="pkEur" type="text" inputmode="decimal" step="0.01" min="0" placeholder="необов’язково"></div>
+        <div data-for="exp"><div class="pk-lbl">Категорія</div><div class="pk-cats" id="pkCats"></div><select id="pkCatAll" aria-label="Усі категорії"></select></div>
+        <div class="pk-row" data-for="inc"><label for="pkSrc">Джерело</label><select id="pkSrc"></select></div>
+        <div data-for="exp" id="pkTagBox"><div class="pk-lbl">Мітки</div><div class="pk-tags" id="pkTags"></div></div>
+        <div data-for="exp" id="pkWhoBox"><div class="pk-lbl">Чия</div><div class="seg pk-who" role="group" aria-label="Чия витрата" id="pkWhoSeg"></div></div>
+        <p class="pk-hint" id="pkWantHint" hidden></p>
+        <div class="pk-row" data-for="exp inc tr"><label for="pkDate">Дата</label><input id="pkDate" type="date" required></div>
+        <div class="pk-row" data-for="exp inc tr"><label for="pkNote">Нотатка</label><input id="pkNote" type="text" maxlength="140" placeholder="необов’язково"></div>
+        <p class="note" id="pkFormMsg"></p>
+        <button class="btn primary pk-save" type="submit" id="pkSave">Зберегти</button>
+      </form>
+    </div>
+  </section>
+
+  <!-- OVERVIEW -->
+  <section class="panel" id="p-overview" hidden>
+    <div class="kpis" id="kpis"></div>
+    <div class="card">
+      <div class="card-head"><h2>Доходи й витрати за місяцями</h2><span class="note" id="ovNote"></span></div>
+      <div class="chart-box tall"><canvas id="chMonthly" aria-label="Доходи й витрати за місяцями"></canvas></div>
+    </div>
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-head"><h2>Куди йдуть гроші</h2><span class="note">у середньому за місяць, <span class="sym">$</span></span></div>
+        <div class="chart-box tall"><canvas id="chGroups" aria-label="Витрати за групами"></canvas></div>
+        <p class="note" style="margin-top:8px">Натисніть на рядок, щоб відкрити групу на вкладці «Витрати».</p>
+      </div>
+      <div class="card">
+        <div class="card-head"><h2>За роками</h2><span class="note"><span class="sym">$</span>, як є або за курсом із налаштувань</span></div>
+        <div class="tbl-wrap"><table id="tblYears"></table></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- BUDGET -->
+  <section class="panel" id="p-budget" hidden>
+    <div class="card">
+      <div class="card-head">
+        <h2 id="budTitle">Бюджет місяця</h2>
+        <div class="row"><div class="ctl"><label for="bMonth">Місяць</label><input type="month" id="bMonth"></div><span id="budStatus"></span></div>
+      </div>
+      <div id="budEmpty" hidden class="prose">
+        <p>Бюджет ще не задано. Його можна заповнити за середніми витратами за останні 12 місяців і поправити вручну.</p>
+        <div class="row"><button class="btn primary" id="btnStartBudget" type="button">Задати бюджет за середнім</button></div>
+      </div>
+      <div id="budBody">
+        <div class="bud-sum" id="budSum"></div>
+        <div style="margin-top:16px" id="budTotal"></div>
+        <p class="note" style="margin-top:6px" id="budPaceNote"></p>
+      </div>
+    </div>
+
+    <div class="grid-2">
+      <div class="card afford">
+        <h2>Можемо собі дозволити?</h2>
+        <div class="row">
+          <div class="ctl"><label for="aAmt">Сума, <span class="sym">$</span></label><input id="aAmt" type="text" min="0" step="1" inputmode="decimal" style="width:6em" value="150"></div>
+          <div class="ctl"><label for="aGroup">з</label><select id="aGroup"></select></div>
+        </div>
+        <div class="answer" id="aAnswer"></div>
+      </div>
+      <div class="card">
+        <div class="card-head"><h2>Останні місяці</h2><span class="note">витрачено / бюджет</span></div>
+        <div class="tbl-wrap"><table id="tblBudHist"></table></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><h2>За групами</h2><span class="note">розмір сектора — бюджет групи, заливка від центру — скільки вже витрачено</span></div>
+      <div class="donut-wrap">
+        <div class="donut-box"><svg id="donut" viewBox="-200 -200 400 400" role="img" aria-label="Бюджет за групами"></svg>
+          <p class="note donut-key"><span class="key-fill"></span>витрачено <span class="key-track"></span>лишилося <span class="key-pace"></span>де маємо бути сьогодні <span class="key-over"></span>перевитрата</p></div>
+        <div class="donut-legend" id="budRows"></div>
+      </div>
+    </div>
+
+    <div class="card" id="budEditCard">
+      <div class="card-head"><h2>Чотири кошики</h2><span class="note" id="budSaved"></span></div>
+      <p class="note" style="max-width:80ch;margin-bottom:12px">Система «усвідомлених витрат» Раміта Сеті: дохід ділиться на чотири кошики, у кожного свій орієнтир у відсотках від доходу. Суми груп задаються в діаграмі вище, тут видно, як вони складаються в кошики. Дохід, інвестиції та заощадження можна змінити прямо в таблиці.</p>
+      <div class="tbl-wrap"><table id="tblBuckets" class="buckets"></table></div>
+      <p class="note" id="bucketNote" style="margin-top:10px"></p>
+      <details class="howto" style="margin-top:16px">
+        <summary>Як користуватися системою</summary>
+        <div class="prose" style="margin-top:10px">
+          <ol>
+            <li><b>Постійні витрати — не більше 50–60% доходу.</b> Усе, що треба платити в будь-якому разі: житло, продукти, податки, зв’язок, здоров’я, транспорт.</li>
+            <li><b>Інвестиції — близько 10%.</b> Довгострокові вкладення, яких не торкаються роками.</li>
+            <li><b>Заощадження — 5–10%.</b> Подушка (3–6 місяців обов’язкових витрат) і цілі. Тут «факт» — те, що лишилося від доходу після всіх витрат.</li>
+            <li><b>Витрати без почуття провини — 20–35%.</b> Кафе, розваги, одяг, подорожі, хобі. Якщо перші три кошики в порядку, ці гроші можна витрачати спокійно.</li>
+          </ol>
+          <p><b>Порядок дій.</b> У день зарплати автоматично переказувати гроші на інвестиції та заощадження. Постійні витрати оплачуються, коли приходять рахунки. Усе, що лишилося, — витрати без почуття провини. Раз на квартал звіряти кошики з орієнтирами й посувати межі.</p>
+          <p class="note">Відсотки — орієнтир, а не закон. Сеті сам пише, що в дорогих містах постійні витрати бувають 65–70%, тоді їх урівноважують меншими витратами без почуття провини.</p>
+        </div>
+      </details>
+      <details class="howto" style="margin-top:8px">
+        <summary>Яка група в якому кошику</summary>
+        <div class="bucket-map" id="bucketMap"></div>
+      </details>
+      <div class="row" style="margin-top:14px"><button class="btn" id="btnFillAvg" type="button">Заповнити бюджети груп за середнім за 12 міс</button></div>
+    </div>
+  </section>
+
+  <!-- SPENDING -->
+  <section class="panel" id="p-spending" hidden>
+    <div class="card">
+      <div class="card-head"><h2>Витрати за групами, за місяцями</h2><span class="note"><span class="sym">$</span> на місяць</span></div>
+      <p class="note" id="stackHint" style="margin:-4px 0 8px"></p>
+      <div class="chart-box tall"><canvas id="chStack" aria-label="Витрати за групами за місяцями"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-head"><h2>Група</h2></div>
+      <div class="chips" id="grpChips"></div>
+      <div class="kpis grp-stats" id="grpStats" style="margin-top:14px"></div>
+    </div>
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-head"><h2 id="grpTrendTitle">Динаміка</h2><span class="note"><span class="sym">$</span> на місяць</span></div>
+        <div class="chart-box"><canvas id="chGrpTrend"></canvas></div>
+      </div>
+      <div class="card">
+        <div class="card-head"><h2>З чого складається</h2><span class="note">категорії та мітки за період</span></div>
+        <div class="tbl-wrap"><table id="tblGrpCats"></table></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- OPERATIONS -->
+  <section class="panel" id="p-ops" hidden>
+    <div class="card">
+      <div class="row" style="margin-bottom:12px">
+        <div class="ctl" style="flex:1 1 220px"><label for="oSearch">Пошук</label><input id="oSearch" type="search" placeholder="нотатка, мітка, категорія" style="width:100%"></div>
+        <div class="ctl"><label for="oKind">Тип</label><select id="oKind"><option value="exp">витрати</option><option value="inc">доходи</option><option value="all">усі</option></select></div>
+        <div class="ctl"><label for="oGroup">Група</label><select id="oGroup"></select></div>
+        <div class="ctl"><label for="oAcct">Рахунок</label><select id="oAcct"></select></div>
+        <div class="ctl"><label for="oCur">Валюта</label><select id="oCur"></select></div>
+        <div class="ctl"><label for="oMin">від $</label><input id="oMin" type="text" inputmode="decimal" min="0" style="width:5em"></div>
+      </div>
+      <p class="status-line" id="oSummary"></p>
+      <div class="tbl-wrap" style="margin-top:8px"><table id="tblOps"></table></div>
+      <div class="row" style="margin-top:12px;justify-content:center"><button class="btn" id="oMore">Показати ще</button></div>
+    </div>
+  </section>
+
+  <!-- ADVICE -->
+  <section class="panel" id="p-advice" hidden>
+    <div class="card prose" id="adviceBody"></div>
+  </section>
+
+  <!-- DATA -->
+  <section class="panel" id="p-data" hidden>
+    <div class="card" id="bkCard">
+      <div class="card-head"><h2>Резервна копія</h2><span class="note" id="bkInfo"></span></div>
+      <div class="row" style="flex-wrap:wrap;gap:8px">
+        <button class="btn primary" id="bkJson" type="button">Завантажити копію (.json)</button>
+        <button class="btn" id="bkCsv" type="button">Усі операції (.csv)</button>
+        <label class="btn" for="bkIn">Відновити з резервної копії</label><input type="file" id="bkIn" accept=".json,application/json" hidden>
+      </div>
+      <p class="status-line" id="bkStatus" style="margin-top:10px"></p>
+      <p class="note">Резервна копія — один файл з усім, що є на сторінці: операції та рахунки «Кишеньки», бюджет, фонди, подушка, цілі. З нього можна відновити все тут або в локальній версії сторінки. CSV — усі операції простою таблицею: її відкриє Excel, Google Таблиці або будь-який інший застосунок для бюджету.</p>
+    </div>
+    <div class="card" id="setupCard">
+      <div class="card-head"><h2>Налаштування</h2><span class="note" id="setupInfo"></span></div>
+      <p class="note" id="setupHint"></p>
+      <h3 style="margin:14px 0 6px">Рахунки</h3>
+      <p class="note">Картки, готівка, накопичувальні рахунки. Залишок — скільки на рахунку зараз, у його валюті.</p>
+      <div id="setupAccts"></div>
+      <button class="linkbtn" id="setupAddAcct" type="button">+ додати рахунок</button>
+      <h3 style="margin:18px 0 6px">Курси валют</h3>
+      <p class="note" id="setupRateNote"></p>
+      <div id="setupRates"></div>
+      <div class="row" style="margin-top:16px;gap:8px;flex-wrap:wrap"><button class="btn primary" id="setupSave" type="button">Зберегти</button><span class="status-line" id="setupStatus"></span></div>
+    </div>
+    <div class="card prose">
+      <h2>Як рахуються суми</h2>
+      <ul>
+        <li>Перемикач $ / € угорі змінює валюту всієї сторінки. Бюджет і фонди зберігаються в доларах і показуються у вибраній валюті.</li>
+        <li>Витрати в інших валютах перераховуються за курсами з «Налаштування». Якщо під час витрати вказати суму в євро, вона береться як є.</li>
+        <li>Перекази між своїми рахунками не вважаються ні доходом, ні витратою.</li>
+        <li>Категорії, їхні ролі (звичайна / забаганка / фонд), люди та ліміти забаганок задаються у файлі <code>config.js</code>. Суми бюджету, цілі фондів і подушку можна змінювати прямо на сторінці.</li>
+      </ul>
+    </div>
+  </section>
+</main>
+
+<script src="config.js"></script>
+<script src="firebase-config.js"></script>
+<style>
+#gate{position:fixed;inset:0;z-index:50;display:grid;place-items:center;background:var(--bg,#16181d);color:var(--ink,#e8e6e1);padding:24px;font-family:'Golos Text',system-ui,sans-serif}
+#gate .box{max-width:340px;text-align:center}
+#gate h1{font-size:1.4rem;font-weight:600;margin:0 0 8px}
+#gate p{color:var(--muted,#9a9790);margin:0 0 20px;line-height:1.45}
+#gate button{font:inherit;font-size:1rem;padding:12px 20px;border-radius:12px;border:0;background:var(--accent,#B79C62);color:var(--accent-ink,#17161A);cursor:pointer}
+#gateErr{color:var(--crit,#d97a6c)!important;margin-top:14px!important}
+#whoami{text-align:center;font-size:.78rem;color:var(--muted,#9a9790);padding:18px 0 90px}
+#whoami button{font:inherit;background:none;border:0;color:inherit;text-decoration:underline;cursor:pointer}
+</style>
+<div id="gate" hidden><div class="box">
+  <h1>Бюджет</h1>
+  <p>Увійдіть акаунтом Google. Відкрити сторінку можуть лише адреси, перелічені в правилах бази.</p>
+  <button type="button" id="gateBtn">Увійти через Google</button>
+  <p id="gateErr" hidden></p>
+</div></div>
+<script>
+(function(){
+  // Three ways to run, picked automatically:
+  //  • inside a Claude artifact — Claude's own database (window.claude), nothing to do here;
+  //  • firebase-config.js not filled — local mode: data lives in this browser (see localDB in the page code);
+  //  • firebase-config.js filled — shared Firebase database with Google sign-in (below).
+  const cfg = window.FIREBASE_CONFIG;
+  if (window.claude && window.claude.use) return;
+  if (!cfg || !cfg.apiKey || /ВСТАВТЕ/.test(cfg.apiKey)) return;
+  const gate = document.getElementById('gate'), err = document.getElementById('gateErr');
+  const fail = m => { gate.hidden = false; err.hidden = false; err.textContent = m; };
+  const load = src => new Promise((ok, no) => document.head.appendChild(Object.assign(document.createElement('script'), {src, onload: ok, onerror: () => no(new Error('не завантажилося: ' + src))})));
+  const V = 'https://www.gstatic.com/firebasejs/10.12.2/';
+  let ready; const signedIn = new Promise(r => ready = r);
+  window.claude = { use: async name => { if (name === 'db'){ await signedIn; return firebase.firestore(); } return null; } };
+  window.__datasetLoader = async () => null;
+  load(V + 'firebase-app-compat.js').then(() => Promise.all([load(V + 'firebase-auth-compat.js'), load(V + 'firebase-firestore-compat.js')])).then(() => {
+  firebase.initializeApp(cfg);
+  const auth = firebase.auth(), fs = firebase.firestore();
+  fs.settings({ignoreUndefinedProperties: true});
+  fs.enablePersistence({synchronizeTabs: true}).catch(() => {});   // works offline, syncs when back online
+  document.getElementById('gateBtn').onclick = async () => {
+    const p = new firebase.auth.GoogleAuthProvider();
+    try { await auth.signInWithPopup(p); }
+    catch(e){ if (e.code === 'auth/popup-blocked' || e.code === 'auth/operation-not-supported-in-this-environment') await auth.signInWithRedirect(p); else fail('Не вдалося увійти: ' + (e.message || e.code)); }
+  };
+  auth.onAuthStateChanged(async u => {
+    if (!u){ gate.hidden = false; return; }
+    try { await fs.doc('meta/access').get(); }   // rules check: is this address allowed?
+    catch(e){ if (e.code !== 'permission-denied'){ gate.hidden = true; ready(u); return; } fail(`Адреса ${u.email} немає в списку доступу. Додайте її в правила Firestore або увійдіть іншим акаунтом.`); await auth.signOut(); return; }
+    gate.hidden = true; ready(u);
+    const w = document.getElementById('whoami') || document.body.appendChild(Object.assign(document.createElement('div'), {id: 'whoami'}));
+    w.innerHTML = ''; w.append(u.email + ' · ');
+    const b = document.createElement('button'); b.type = 'button'; b.textContent = 'вийти'; b.onclick = () => auth.signOut().then(() => location.reload()); w.append(b);
+  });
+  // the page asks for capabilities the same way it does inside Claude
+  }).catch(e => fail('Не вдалося підключити Firebase: ' + e.message));
+})();
+</script>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js" crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js" crossorigin="anonymous"></script>
+<script>
+"use strict";
+function showErr(msg){ const b = document.getElementById('errBox'); if (!b) return; b.hidden = false; b.textContent = 'Помилка на сторінці: ' + msg + ' — надішліть цей текст Claude.'; }
+window.addEventListener('error', e => showErr(e.message || String(e)));
+window.addEventListener('unhandledrejection', e => showErr((e.reason && (e.reason.message || e.reason.code)) || String(e.reason)));
+/* ============ constants ============ */
+const BASE = Date.UTC(2016,0,1), DAY = 864e5;
+const CFG = window.APP_CONFIG || {};
+const PEOPLE = CFG.people || [];
+const PIVOT = CFG.rateBase || 'EUR';
+const ONEOFF_EXP = new Set(CFG.oneoff || []);
+const ONEOFF_INC = new Set(CFG.oneoffIncome || []);
+// fixed colour per group: identity, never rank
+const GROUP_COLOR = Object.fromEntries((CFG.categories||[]).filter(c => c.color).map(c => [c.name, '--s' + c.color]));
+const MAIN_GROUPS = Object.keys(GROUP_COLOR);
+const GROUP_RULES = [];
+// spreading: quarterly taxes over 3 months by default; any single expense can be spread from the operations table
+const SPREAD_RULES = CFG.spread || [];
+const MONTHS = ['січ','лют','бер','кві','тра','чер','лип','сер','вер','жов','лис','гру'];
+const MONTHS_FULL = ['січень','лютий','березень','квітень','травень','червень','липень','серпень','вересень','жовтень','листопад','грудень'];
+const MONTHS_GEN = ['січня','лютого','березня','квітня','травня','червня','липня','серпня','вересня','жовтня','листопада','грудня'];
+
+/* ============ state ============ */
+let D = null;        // raw data object (same shape as data.json)
+let TXV = [];        // view rows: TX with spread expenses split across months
+let SPREAD = {};     // txKey -> months, shared via db
+let TX = [];         // decoded rows
+let MIN_YM = 0, MAX_YM = 0;
+let budget = null;   // {groups:{}, savings, income, updatedAt}
+let db = null, assets = null, userCap = null;
+const charts = {};
+const S = {cur:'USD', period:'l12', from:0, to:0, person:'all', oneoff:false, smooth:true, group:'Їжа', opsShown:100, sel:new Set()};
+
+/* ============ helpers ============ */
+const $ = s => document.querySelector(s);
+const css = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+const SYM = () => S.cur==='EUR' ? '€' : '$';
+const V = t => S.cur==='EUR' ? t.eur : t.usd;
+const VB = b => S.cur==='EUR' ? (b.eur ?? b.usd*eurPerUsd()) : b.usd;
+const fmt = (v, d=0) => (v<0?'−':'') + SYM() + Math.abs(v).toLocaleString('uk-UA',{maximumFractionDigits:d, minimumFractionDigits:d});
+const fmtN = (v, d=0) => v.toLocaleString('uk-UA',{maximumFractionDigits:d, minimumFractionDigits:d});
+// Ukrainian plural: 1 операція, 2 операції, 5 операцій
+const plural = (n, one, few, many) => { const a = Math.abs(Math.round(n)) % 100, b = a % 10; return a > 10 && a < 20 ? many : b === 1 ? one : b >= 2 && b <= 4 ? few : many; };
+const OPS = n => fmtN(n) + ' ' + plural(n, 'операція', 'операції', 'операцій');
+const RECS = n => fmtN(n) + ' ' + plural(n, 'запис', 'записи', 'записів');
+const ymOf = day => { const d = new Date(BASE + day*DAY); return d.getUTCFullYear()*12 + d.getUTCMonth(); };
+const ymLabel = ym => MONTHS[ym%12] + ' ' + String(Math.floor(ym/12)).slice(2);
+const ymLong = ym => MONTHS_FULL[ym%12] + ' ' + Math.floor(ym/12);
+const ymToInput = ym => Math.floor(ym/12) + '-' + String(ym%12+1).padStart(2,'0');
+const inputToYm = s => { const [y,m] = s.split('-').map(Number); return y*12+m-1; };
+const dayStr = day => { const d = new Date(BASE+day*DAY); return d.getUTCDate().toString().padStart(2,'0')+'.'+String(d.getUTCMonth()+1).padStart(2,'0')+'.'+d.getUTCFullYear(); };
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const lsGet = k => { try { return JSON.parse(localStorage.getItem(k)); } catch(e){ return null; } };
+const lsSet = (k,v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch(e){} };
+let R0 = 0;
+function rateOn(day, cur){ // base-currency units per 1 unit, nearest available day
+  if (cur===PIVOT) return 1; const RD = D.rates; const i = Math.min(Math.max(0, day - R0), RD.USD.length-1);
+  if (cur==='RUB') return RD.USD[i]/RD.RUBperUSD; const a = RD[cur]; return a ? a[i] : RD.USD[i]; }
+const eurPerUsd = () => { if (!D){ const r = PKCFG && PKCFG.rates; return r ? r.USD/r.EUR : 0.86; } const RD = D.rates, i = RD.USD.length-1; return RD.USD[i]/RD.EUR[i]; };
+const budK = () => S.cur==='EUR' ? eurPerUsd() : 1;  // budget is stored in USD
+
+/* ============ data decoding ============ */
+function decode(data){
+  D = data; R0 = Math.round((Date.parse(data.rates.start)-BASE)/DAY);
+  const tagNames = data.tags;
+  TX = data.tx.map(r => {
+    const inc = r[1]===1;
+    const tags = r[7].map(i => tagNames[i]);
+    const name = inc ? data.srcs[r[2]] : data.cats[r[2]];
+    let group = inc ? data.srcGroup[r[2]] : data.catGroup[r[2]];
+    if (!inc){ const rule = GROUP_RULES.find(g => (!g.tag || tags.includes(g.tag)) && (!g.cat || g.cat===name)); if (rule) group = rule.group; }
+    return {day:r[0], ym:ymOf(r[0]), inc, name, group, acct:data.accts[r[3]], amt:r[4], cur:data.curs[r[5]], usd:r[6], tags, note:r[8]||'',
+            amt2:r[9]??null, cur2:r[10]!=null ? data.curs[r[10]] : null,
+            eur: r[11]!=null ? r[11] : Math.round(r[6]*rateOn(r[0],'USD')/rateOn(r[0],'EUR')*100)/100,
+            usdAsis: r[12]!=null ? !!(r[12]&1) : (data.curs[r[5]]==='USD'), eurAsis: r[12]!=null ? !!(r[12]&2) : (data.curs[r[5]]==='EUR'),
+            who: PEOPLE.find(p => tags.includes(p)) || null,
+            oneoff: inc ? ONEOFF_INC.has(group) : ONEOFF_EXP.has(group)};
+  });
+  // operations entered in «Кишеньки» join the history as ordinary rows
+  pocketRows().forEach(t => TX.push(t));
+  TX.sort((a,b) => a.day - b.day);
+  // sanity check: CoinKeeper keeps the old "amount in category" when an operation is moved to a category in
+  // another currency (e.g. 1777 UAH left labelled as 1777 EUR). The debited amount is always right, so if a
+  // converted value is off by more than 30% from the NBU rate, recompute it from the debited amount.
+  TX.forEach(t => {
+    if (t.pocket) return;
+    const rs = rateOn(t.day, t.cur), su = t.amt*rs/rateOn(t.day,'USD'), se = t.amt*rs/rateOn(t.day,'EUR');
+    if (su < 0.5) return;
+    if (Math.abs(t.usd/su - 1) > 0.3){ t.usd = Math.round(su*100)/100; t.usdAsis = t.cur==='USD'; t.convFixed = true; }
+    if (Math.abs(t.eur/se - 1) > 0.3){ t.eur = Math.round(se*100)/100; t.eurAsis = t.cur==='EUR'; t.convFixed = true; }
+  });
+  MIN_YM = TX.length ? TX[0].ym : nowYM(); MAX_YM = Math.max(TX.length ? TX[TX.length-1].ym : 0, nowYM());
+  buildView();
+}
+const txKey = t => `${t.day}-${Math.round(t.amt*100)}-${t.cur}`;
+function spreadOf(t){
+  if (t.inc) return 1;
+  const k = SPREAD[txKey(t)]; if (k) return k;
+  const r = SPREAD_RULES.find(x => x.group===t.group); return r ? r.months : 1;
+}
+function buildView(){
+  TXV = [];
+  TX.forEach(t => { const n = S.smooth ? spreadOf(t) : 1;
+    if (n<=1) TXV.push(t);
+    else for (let i=0;i<n;i++) TXV.push({...t, ym:t.ym+i, usd:t.usd/n, eur:t.eur/n, part:i+1, parts:n}); });
+}
+
+/* ============ filtering ============ */
+function periodRange(){
+  const p = S.period;
+  if (p==='l12') return [MAX_YM-11, MAX_YM];
+  if (p==='all') return [MIN_YM, MAX_YM];
+  if (p==='custom') return [Math.max(MIN_YM, Math.min(S.from,S.to)), Math.min(MAX_YM, Math.max(S.from,S.to))];
+  const y = +p; return [Math.max(MIN_YM,y*12), Math.min(MAX_YM,y*12+11)];
+}
+function personOk(t){
+  if (S.person==='all') return true;
+  if (S.person==='common') return !t.who;
+  return t.who===S.person;
+}
+function filtered(raw){
+  const [a,b] = periodRange();
+  return (raw ? TX : TXV).filter(t => t.ym>=a && t.ym<=b && personOk(t) && (S.oneoff || !t.oneoff));
+}
+function monthsIn(){ const [a,b]=periodRange(); return Math.max(1,b-a+1); }
+
+/* ============ charts ============ */
+function chartDefaults(){
+  Chart.defaults.font.family = css('--f-body') || 'system-ui';
+  Chart.defaults.font.size = 12;
+  Chart.defaults.color = css('--ink-2');
+  Chart.defaults.borderColor = css('--line');
+  Chart.defaults.plugins.tooltip.backgroundColor = css('--surface');
+  Chart.defaults.plugins.tooltip.titleColor = css('--ink');
+  Chart.defaults.plugins.tooltip.bodyColor = css('--ink-2');
+  Chart.defaults.plugins.tooltip.borderColor = css('--line');
+  Chart.defaults.plugins.tooltip.borderWidth = 1;
+  Chart.defaults.plugins.tooltip.padding = 10;
+  Chart.defaults.plugins.tooltip.boxPadding = 4;
+  Chart.defaults.plugins.legend.labels.boxWidth = 10;
+  Chart.defaults.plugins.legend.labels.boxHeight = 10;
+  Chart.defaults.plugins.legend.labels.useBorderRadius = true;
+  Chart.defaults.plugins.legend.labels.borderRadius = 3;
+  Chart.defaults.maintainAspectRatio = false;
+  // no animations: every redraw happens immediately, without relying on animation frames,
+  // which stopped firing reliably inside the claude.ai viewer
+  Chart.defaults.animation = false;
+  Chart.defaults.animations = {};
+  Chart.defaults.transitions.active.animation.duration = 0;
+}
+function mkChart(id, cfg){
+  // update an existing chart in place instead of destroying it: destroying a chart while it is
+  // still handling a click, hover or resize is what broke the page in the claude.ai viewer
+  const c = charts[id];
+  if (c && c.canvas && c.canvas.isConnected && c.config.type === cfg.type){
+    try { c.data = cfg.data; c.options = cfg.options; c.update('none'); c.render(); return c; } catch(e){ try { c.destroy(); } catch(_){} }
+  } else if (c){ try { c.destroy(); } catch(_){} }
+  charts[id] = new Chart(document.getElementById(id), cfg); return charts[id];
+}
+const usdTick = v => SYM() + (Math.abs(v)>=1000 ? fmtN(v/1000, v%1000?1:0)+'k' : fmtN(v));
+const gridY = () => ({grid:{color:css('--line')}, border:{display:false}, ticks:{callback:usdTick}});
+const gridX = () => ({grid:{display:false}, border:{color:css('--line')}});
+const tipUsd = ctx => ' ' + ctx.dataset.label + ': ' + fmt(ctx.parsed.y ?? ctx.parsed.x);
+
+/* ============ OVERVIEW ============ */
+function renderOverview(){
+  const rows = filtered(), n = monthsIn(), [a,b] = periodRange();
+  const inc = rows.filter(t=>t.inc).reduce((s,t)=>s+V(t),0);
+  const exp = rows.filter(t=>!t.inc).reduce((s,t)=>s+V(t),0);
+  const net = inc-exp, rate = inc>0 ? net/inc*100 : 0;
+  // cushion: balances vs last-12m average expenses (always household, no one-offs)
+  const bal = (PKCFG && PKCFG.accounts && PKCFG.accounts.length) ? pkCushion() : (D.balances||[]).reduce((s,x)=>s+VB(x),0);
+  const l12 = TXV.filter(t=>!t.inc && !t.oneoff && t.ym>MAX_YM-12 && t.ym<=MAX_YM).reduce((s,t)=>s+V(t),0)/12;
+  const months = l12>0 ? bal/l12 : 0;
+  const rateCls = rate>=15?'good':rate>=5?'warn':'crit';
+  const rateTxt = rate>=15?'добре':rate>=5?'мало':'не відкладаємо';
+  $('#kpis').innerHTML = `
+    <div class="kpi"><span class="eyebrow">Дохід на місяць</span><span class="v">${fmt(inc/n)}</span><span class="d">за ${n} міс · усього ${fmt(inc)}</span></div>
+    <div class="kpi"><span class="eyebrow">Витрати на місяць</span><span class="v">${fmt(exp/n)}</span><span class="d">усього ${fmt(exp)}</span></div>
+    <div class="kpi"><span class="eyebrow">Відкладено</span><span class="v">${fmt(net)}</span><span class="d"><span class="pill ${rateCls}">${fmtN(rate,1)}% доходу · ${rateTxt}</span></span></div>
+    <div class="kpi"><span class="eyebrow">Подушка</span><span class="v">${fmt(bal)}</span><span class="d">усі гроші на рахунках на ${dayStr(D.balanceDayNum ?? 0)}</span><span class="d"><span class="pill ${months>=6?'good':months>=3?'warn':'crit'}">≈ ${fmtN(months,1)} міс витрат</span></span></div>`;
+  $('#ovNote').textContent = ymLong(a) + ' — ' + ymLong(b) + (S.person!=='all' ? ' · '+$('#fPerson').selectedOptions[0].text : '') + (S.oneoff?'':' · без великих разових');
+
+  // monthly
+  const labels=[], ivals=[], evals=[];
+  for (let ym=a; ym<=b; ym++){ labels.push(ymLabel(ym)); ivals.push(0); evals.push(0); }
+  rows.forEach(t => { const i=t.ym-a; if (t.inc) ivals[i]+=V(t); else evals[i]+=V(t); });
+  mkChart('chMonthly', {type:'bar', data:{labels, datasets:[
+    {type:'bar', label:'Витрати', data:evals.map(v=>Math.round(v)), backgroundColor:css('--s1'), borderRadius:4, borderSkipped:'start', maxBarThickness:28, order:2},
+    {type:'line', label:'Дохід', data:ivals.map(v=>Math.round(v)), borderColor:css('--s2'), backgroundColor:css('--s2'), borderWidth:2, pointRadius: labels.length>40?0:3, pointHoverRadius:5, tension:0, order:1}
+  ]}, options:{interaction:{mode:'index',intersect:false}, plugins:{legend:{position:'top',align:'start'}, tooltip:{callbacks:{label:tipUsd, footer:items=>{const e=items.find(i=>i.dataset.label==='Витрати'), i2=items.find(i=>i.dataset.label==='Дохід'); return e&&i2 ? 'Різниця: '+fmt(i2.parsed.y-e.parsed.y) : '';}}}}, scales:{x:{...gridX(), ticks:{autoSkip:true, maxRotation:0}}, y:{...gridY(), beginAtZero:true}}}});
+
+  // groups
+  const byG = {}; rows.filter(t=>!t.inc).forEach(t=>byG[t.group]=(byG[t.group]||0)+V(t));
+  const gs = Object.entries(byG).sort((x,y)=>y[1]-x[1]);
+  const ch = mkChart('chGroups', {type:'bar', data:{labels:gs.map(g=>g[0]), datasets:[{label:'На місяць', data:gs.map(g=>Math.round(g[1]/n)), backgroundColor:gs.map(g=>css(GROUP_COLOR[g[0]]||'--s0')), borderRadius:4, borderSkipped:'start', barThickness:'flex', maxBarThickness:16}]},
+    options:{indexAxis:'y', plugins:{legend:{display:false}, tooltip:{callbacks:{label:ctx=>' '+fmt(ctx.parsed.x)+' на місяць · '+fmtN(ctx.parsed.x/(exp/n)*100,1)+'%'}}}, scales:{x:{...gridY(), position:'top'}, y:{grid:{display:false}, border:{display:false}, ticks:{autoSkip:false, font:{size:11.5}}}},
+      onClick:(e,els)=>{ if(els.length){ const g = gs[els[0].index][0]; setTimeout(()=>{ S.sel = new Set([g]); location.hash='spending'; }, 0); } }, onHover:(e,els)=>{ if (e.native) e.native.target.style.cursor = els.length?'pointer':'default'; }}});
+  $('#chGroups').parentElement.style.height = Math.max(300, gs.length*24+40)+'px'; ch.resize();
+
+  // years table
+  const yrs = {};
+  rows.forEach(t => { const y=Math.floor(t.ym/12); yrs[y] ??= {i:0,e:0,m:new Set()}; yrs[y][t.inc?'i':'e'] += V(t); yrs[y].m.add(t.ym); });
+  let h = '<thead><tr><th>Рік</th><th class="n">Дохід</th><th class="n">Витрати</th><th class="n">Різниця</th><th class="n">Норма</th></tr></thead><tbody>';
+  Object.keys(yrs).sort((x,y)=>y-x).forEach(y => { const r=yrs[y], d=r.i-r.e, p=r.i? d/r.i*100:0;
+    const yearMonths = Math.min(12, Math.min(MAX_YM, y*12+11) - Math.max(MIN_YM, y*12) + 1);
+    h += `<tr><td>${y}${yearMonths<12?` <span class="muted">(${yearMonths} міс)</span>`:''}</td><td class="n">${fmt(r.i)}</td><td class="n">${fmt(r.e)}</td><td class="n" style="color:var(${d>=0?'--good':'--crit'})">${fmt(d)}</td><td class="n">${r.i?fmtN(p,0)+'%':'—'}</td></tr>`; });
+  $('#tblYears').innerHTML = h + '</tbody>';
+}
+
+/* ============ SPENDING ============ */
+function renderSpending(){
+  const rows = filtered().filter(t=>!t.inc), [a,b] = periodRange(), n = monthsIn();
+  const labels=[]; for (let ym=a; ym<=b; ym++) labels.push(ymLabel(ym));
+  // S.sel: the groups picked (any number); empty = everything. 'Решта' stands for the groups without their own colour.
+  const sel = S.sel, many = sel.size > 0;
+  const bucket = g => GROUP_COLOR[g] ? g : 'Решта';
+  const inSel = g => !many || sel.has(g) || (sel.has('Решта') && !GROUP_COLOR[g]);
+  const series = {};
+  if (many){
+    [...sel].forEach(g => series[g] = new Array(labels.length).fill(0));
+    rows.forEach(t => { const k = sel.has(t.group) ? t.group : (sel.has('Решта') && !GROUP_COLOR[t.group] ? 'Решта' : null); if (k) series[k][t.ym-a] += V(t); });
+  } else {
+    [...MAIN_GROUPS,'Решта'].forEach(g => series[g]=new Array(labels.length).fill(0));
+    rows.forEach(t => { series[bucket(t.group)][t.ym-a]+=V(t); });
+  }
+  const toggle = g => { if (sel.has(g)) sel.delete(g); else sel.add(g); setTimeout(renderSpending, 0); };
+  const legendClick = (e, item) => toggle(item.text);
+  const selNames = [...sel];
+  $('#stackHint').innerHTML = many ? `Вибрано: ${selNames.map(esc).join(', ')} · <button class="linkbtn" id="stackAll" type="button">скинути</button>` : 'Натисніть на групи в легенді або нижче — можна вибрати кілька одразу';
+  if (many) $('#stackAll').onclick = () => { sel.clear(); renderSpending(); };
+  const palette = ['--s1','--s2','--s3','--s4','--s5','--s6','--s7'];
+  // distinct colours: a group keeps its own colour unless another picked group already has it
+  const used = new Set(), colorOf = {};
+  Object.keys(series).forEach(g => { let c = g==='Решта' ? '--s0' : GROUP_COLOR[g];
+    if (!c || used.has(c)) c = palette.find(x => !used.has(x)) || palette[used.size % palette.length];
+    used.add(c); colorOf[g] = c; });
+  mkChart('chStack', {type:'bar', data:{labels, datasets:Object.entries(series).map(([g,v])=>({label:g, data:v.map(Math.round), backgroundColor:css(colorOf[g]), borderColor:css('--surface'), borderWidth:{top:1}, borderSkipped:false, maxBarThickness:28}))},
+    options:{interaction:{mode:'index',intersect:false}, plugins:{legend:{position:'top',align:'start', onClick:legendClick, onHover:(e)=>{ if (e.native) e.native.target.style.cursor='pointer'; }, onLeave:(e)=>{ if (e.native) e.native.target.style.cursor='default'; }}, tooltip:{filter:i=>i.parsed.y>0, itemSort:(x,y)=>y.parsed.y-x.parsed.y, callbacks:{label:tipUsd, footer:items=>items.length>1?'Усього: '+fmt(items.reduce((s,i)=>s+i.parsed.y,0)):''}}},
+      scales:{x:{...gridX(), stacked:true, ticks:{maxRotation:0, autoSkip:true}}, y:{...gridY(), stacked:true, beginAtZero:true}}}});
+
+  // chips: toggle any number of groups
+  const byG = {}; rows.forEach(t=>byG[t.group]=(byG[t.group]||0)+V(t));
+  const gs = Object.entries(byG).sort((x,y)=>y[1]-x[1]).map(g=>g[0]);
+  [...sel].forEach(g => { if (g!=='Решта' && !gs.includes(g)) sel.delete(g); });
+  $('#grpChips').innerHTML = gs.map(g=>`<button class="chip" aria-pressed="${sel.has(g)}" data-g="${esc(g)}">${esc(g)} <span class="mono muted">${fmt(byG[g]/n)}</span></button>`).join('') +
+    (many ? `<button class="chip" type="button" id="grpClear">× скинути</button>` : '');
+  $('#grpChips').querySelectorAll('.chip[data-g]').forEach(c=>c.onclick=()=>toggle(c.dataset.g));
+  if (many) $('#grpClear').onclick = () => { sel.clear(); renderSpending(); };
+  const gr = rows.filter(t=>inSel(t.group));
+  const trend = new Array(labels.length).fill(0); gr.forEach(t=>trend[t.ym-a]+=V(t));
+  const avg = gr.reduce((s,t)=>s+V(t),0)/n;
+  const title = !many ? 'Усі витрати' : selNames.length <= 3 ? selNames.join(' + ') : `${selNames.length} ${plural(selNames.length, 'група', 'групи', 'груп')} разом`;
+  $('#grpTrendTitle').textContent = title;
+  const col = css(sel.size===1 ? (GROUP_COLOR[selNames[0]]||'--s1') : '--accent');
+  mkChart('chGrpTrend', {type:'line', data:{labels, datasets:[
+    {label:title, data:trend.map(Math.round), borderColor:col, backgroundColor:col+'26', fill:'origin', borderWidth:2, pointRadius:labels.length>40?0:3, pointHoverRadius:5},
+    {label:'Середнє', data:labels.map(()=>Math.round(avg)), borderColor:css('--muted'), borderDash:[4,4], borderWidth:1.5, pointRadius:0}
+  ]}, options:{interaction:{mode:'index',intersect:false}, plugins:{legend:{position:'top',align:'start'}, tooltip:{callbacks:{label:tipUsd}}}, scales:{x:{...gridX(), ticks:{maxRotation:0}}, y:{...gridY(), beginAtZero:true}}}});
+  const showGroup = sel.size !== 1;
+  // summary for the picked groups over the period
+  {
+    const allSum = rows.reduce((s,t)=>s+V(t),0), sum = gr.reduce((s,t)=>s+V(t),0);
+    const months = trend.map((v,i)=>({v, ym:a+i}));
+    const sorted = trend.slice().sort((x,y)=>x-y), med = sorted.length ? (sorted.length%2 ? sorted[(sorted.length-1)/2] : (sorted[sorted.length/2-1]+sorted[sorted.length/2])/2) : 0;
+    const mx = months.reduce((m,x)=>x.v>m.v?x:m, {v:-1}), mn = months.reduce((m,x)=>x.v<m.v?x:m, {v:Infinity});
+    const last3 = trend.slice(-3), l3 = last3.length ? last3.reduce((s,v)=>s+v,0)/last3.length : 0, dl = avg ? (l3-avg)/avg*100 : 0;
+    const half = Math.floor(trend.length/2), h1 = half ? trend.slice(0,half).reduce((s,v)=>s+v,0)/half : 0, h2 = trend.length-half ? trend.slice(half).reduce((s,v)=>s+v,0)/(trend.length-half) : 0;
+    const ops = gr.length, cnt = new Set(gr.map(t=>t.ym)).size;
+    const ml = ym => ymLabel(ym);
+    const k = (l, v, d) => `<div class="kpi"><span class="eyebrow">${l}</span><span class="v">${v}</span>${d?`<span class="d">${d}</span>`:''}</div>`;
+    $('#grpStats').innerHTML = [
+      k('Усього за період', fmt(sum), many ? `${fmtN(allSum ? sum/allSum*100 : 0, 0)}% усіх витрат` : `${n} міс.`),
+      k('У середньому на місяць', fmt(avg), `медіана ${fmt(med)}`),
+      k('Останні 3 місяці', fmt(l3) + '<small style="font-size:.7em"> /міс</small>', avg ? `<span style="color:var(${dl>10?'--warn':dl<-10?'--good':'--ink-2'})">${dl>=0?'+':''}${fmtN(dl,0)}% до середнього</span>` : ''),
+      k('Найдорожчий місяць', mx.v>0 ? fmt(mx.v) : '—', mx.v>0 ? ml(mx.ym) : ''),
+      k('Найдешевший місяць', mn.v<Infinity ? fmt(mn.v) : '—', mn.v<Infinity ? ml(mn.ym) : ''),
+      k('Операцій', fmtN(ops,0), ops ? `середній чек ${fmt(sum/ops)} · ${fmtN(ops/n,0)} на міс.` : ''),
+      k('Тренд: 1-ша → 2-га половина', `${fmt(h1)} → ${fmt(h2)}`, h1 ? `${h2>=h1?'+':''}${fmtN((h2-h1)/h1*100,0)}% на місяць` : ''),
+      k('На день', fmt(sum/Math.max(1, n*30.44)), cnt < n ? `витрати були в ${cnt} з ${n} міс.` : 'у середньому за період')
+    ].join('');
+  }
+  // categories + tags
+  const byC = {}, byT = {};
+  gr.forEach(t => { const cn = showGroup ? t.name + '\u0000' + t.group : t.name; byC[cn]=(byC[cn]||0)+V(t); t.tags.filter(x=>!PEOPLE.includes(x)).forEach(x=>byT[x]=(byT[x]||0)+V(t)); });
+  const tot = gr.reduce((s,t)=>s+V(t),0);
+  let h = '<thead><tr><th>Категорія</th><th class="n">Усього</th><th class="n">На місяць</th><th class="n">Частка</th></tr></thead><tbody>';
+  Object.entries(byC).sort((x,y)=>y[1]-x[1]).slice(0, showGroup ? 40 : 999).forEach(([c,v])=>{ const [nm, gp] = c.split('\u0000'); h+=`<tr><td>${esc(nm)}${gp ? ` <span class="muted">· ${esc(gp)}</span>` : ''}</td><td class="n">${fmt(v)}</td><td class="n">${fmt(v/n)}</td><td class="n">${fmtN(v/tot*100,0)}%</td></tr>`; });
+  const tg = Object.entries(byT).sort((x,y)=>y[1]-x[1]).slice(0,12);
+  if (tg.length){ h += '</tbody><thead><tr><th>Мітка</th><th class="n">Усього</th><th class="n">На місяць</th><th class="n">Частка</th></tr></thead><tbody>';
+    tg.forEach(([c,v])=>h+=`<tr><td>${esc(c)}</td><td class="n">${fmt(v)}</td><td class="n">${fmt(v/n)}</td><td class="n">${fmtN(v/tot*100,0)}%</td></tr>`); }
+  $('#tblGrpCats').innerHTML = h + '</tbody>';
+}
+
+/* ============ OPERATIONS ============ */
+function fillOpsSelectors(){
+  const groups = [...new Set(TX.map(t=>t.group))].sort((a,b)=>a.localeCompare(b,'ru'));
+  $('#oGroup').innerHTML = '<option value="">усі</option>' + groups.map(g=>`<option>${esc(g)}</option>`).join('');
+  const accts = [...new Set(TX.map(t=>t.acct))].sort((a,b)=>a.localeCompare(b,'ru'));
+  $('#oAcct').innerHTML = '<option value="">усі</option>' + accts.map(g=>`<option>${esc(g)}</option>`).join('');
+  $('#oCur').innerHTML = '<option value="">усі</option>' + D.curs.map(g=>`<option>${g}</option>`).join('');
+}
+function renderOps(){
+  const q = $('#oSearch').value.trim().toLowerCase(), kind=$('#oKind').value, g=$('#oGroup').value, ac=$('#oAcct').value, cu=$('#oCur').value, mn=+$('#oMin').value||0;
+  const rows = filtered(true).filter(t => (kind==='all' || (kind==='inc')===t.inc) && (!g||t.group===g) && (!ac||t.acct===ac) && (!cu||t.cur===cu) && V(t)>=mn &&
+     (!q || (t.note+' '+t.tags.join(' ')+' '+t.name+' '+t.group+' '+t.acct).toLowerCase().includes(q))).reverse();
+  const sum = rows.reduce((s,t)=>s+(t.inc?V(t):-V(t)),0);
+  $('#oSummary').textContent = `${OPS(rows.length)} · разом ${fmt(sum)}` + (kind==='exp'?' (витрати зі знаком мінус)':'');
+  let h = '<thead><tr><th>Дата</th><th>Категорія</th><th>Рахунок</th><th>Нотатка, мітки</th><th class="n">Списано</th><th class="n">В '+SYM()+'</th><th class="n" title="Розподілити покупку на кілька місяців у графіках і бюджеті">Врахувати за</th></tr></thead><tbody>';
+  rows.slice(0,S.opsShown).forEach(t => {
+    const k2 = t.amt2!=null && t.cur2 ? `<div class="muted" style="font-size:.78rem">${fmtN(t.amt2,2)}<span class="cur">${t.cur2}</span> у категорії</div>` + (t.convFixed ? `<div style="font-size:.72rem;color:var(--warn)">⚠ CoinKeeper не перерахував суму в категорії, взято курс</div>` : '') : '';
+    const asis = S.cur==='EUR' ? t.eurAsis : t.usdAsis;
+    const tgt = S.cur==='EUR' ? 'EUR' : 'USD', rt = rateOn(t.day,tgt)/rateOn(t.day,t.cur);
+    const how = asis ? 'як є' : 'курс ' + fmtN(rt, rt<10?3:2) + ' ' + t.cur + '/' + SYM();
+    h += `<tr><td class="mono" style="white-space:nowrap">${dayStr(t.day)}</td><td>${esc(t.name)}<div class="muted" style="font-size:.78rem">${esc(t.group)}</div></td><td>${esc(t.acct)}</td><td style="min-width:160px">${esc(t.note)}${t.tags.length?`<div class="muted" style="font-size:.78rem">${t.tags.map(esc).join(', ')}</div>`:''}</td><td class="n">${fmtN(t.amt,2)}<span class="cur">${t.cur}</span>${k2}</td><td class="n" style="color:var(${t.inc?'--good':'--ink'})">${t.inc?'+':''}${fmt(V(t),2)}<div class="muted" style="font-size:.72rem;color:var(${asis?'--good':'--muted'})">${asis?'✓ ':''}${how}</div></td><td class="n">${t.inc?'':spreadSel(t)}</td></tr>`; });
+  $('#tblOps').innerHTML = h + '</tbody>';
+  $('#oMore').hidden = rows.length <= S.opsShown;
+}
+
+function spreadSel(t){
+  const n = spreadOf(t), k = txKey(t);
+  return `<select class="spr" data-k="${k}" aria-label="На скільки місяців розподілити">${[1,2,3,4,5,6,9,12].map(m=>`<option value="${m}" ${m===n?'selected':''}>${m} міс</option>`).join('')}</select>`;
+}
+async function setSpread(k, n){
+  if (n<=1) delete SPREAD[k]; else SPREAD[k] = n;
+  buildView(); render();
+  try {
+    if (db){ if (n<=1) await db.doc('spread/'+k).delete(); else await db.doc('spread/'+k).set({months:n, updatedAt:new Date().toISOString()}); }
+    else lsSet('spread', SPREAD);
+  } catch(e){ $('#oSummary').textContent = 'Не вдалося зберегти розподіл: ' + (e.message||e.code); }
+}
+
+/* overspend severity: a few dollars over is not news while the month as a whole is fine */
+function overSev(spent, budget, monthOk){
+  const r = spent - budget; if (!budget || r <= 0.5) return '';
+  if (r <= Math.max(budget*0.15, 25*budK())) return 'soft';
+  return monthOk ? 'warn' : 'crit';
+}
+const sevColor = sev => sev==='crit' ? '--crit' : sev==='warn' ? '--warn' : sev==='soft' ? '--over-soft' : '--ink';
+
+/* ============ BUDGET ============ */
+function avgL12ByGroup(){
+  const out = {}; TXV.filter(t=>!t.inc && t.ym>MAX_YM-12 && t.ym<=MAX_YM).forEach(t=>out[t.group]=(out[t.group]||0)+V(t)/12); return out;
+}
+function avgL12Income(){ return TX.filter(t=>t.inc && !t.oneoff && t.ym>MAX_YM-12).reduce((s,t)=>s+V(t),0)/12; }
+function budgetMonth(){ return inputToYm($('#bMonth').value || ymToInput(MAX_YM)); }
+function spentIn(ym){ const o={}; TXV.filter(t=>!t.inc && t.ym===ym).forEach(t=>o[t.group]=(o[t.group]||0)+V(t)); return o; }
+function paceFrac(ym){
+  const now = new Date(), nym = now.getFullYear()*12+now.getMonth();
+  if (ym < nym) return 1; if (ym > nym) return 0;
+  const dim = new Date(now.getFullYear(), now.getMonth()+1, 0).getDate(); return now.getDate()/dim;
+}
+function renderBudget(){
+  if (!D) return;
+  const has = budget && budget.groups && Object.keys(budget.groups).length;
+  $('#budEmpty').hidden = !!has; $('#budBody').hidden = !has;
+  renderEditor();
+  const ym = budgetMonth(); $('#budTitle').textContent = 'Бюджет: ' + ymLong(ym);
+  const spent = spentIn(ym), pace = paceFrac(ym), avg = avgL12ByGroup();
+  const kB = budK(); const B = has ? Object.fromEntries(Object.entries(budget.groups).map(([g,v])=>[g,(+v||0)*kB])) : {};
+  const totB = Object.values(B).reduce((s,v)=>s+(+v||0),0);
+  const totS = Object.values(spent).reduce((s,v)=>s+v,0);
+  const left = totB - totS;
+  if (has){
+    const st = totS > totB ? [overSev(totS,totB,false)==='soft' ? 'warn' : 'crit','Перевитрата'] : totS > totB*pace*1.05 && pace<1 ? ['warn','Витрачаємо швидше за план'] : ['good', pace<1 ? 'Ідемо за планом' : 'Вклалися'];
+    $('#budStatus').innerHTML = `<span class="pill ${st[0]}">${st[1]}</span>`;
+    const inc = (+budget.income || 0)*kB, sav = (+budget.savings || 0)*kB;
+    $('#budSum').innerHTML = `
+      <div><div class="eyebrow">Бюджет витрат</div><div class="v">${fmt(totB)}</div></div>
+      <div><div class="eyebrow">Витрачено</div><div class="v">${fmt(totS)}</div></div>
+      <div><div class="eyebrow">${left>=0?'Можна ще витратити':'Перевитрата'}</div><div class="v" style="color:var(${left>=0?'--good':'--warn'})">${fmt(Math.abs(left))}</div></div>
+      <div><div class="eyebrow">Відкладаємо</div><div class="v">${fmt(sav)}</div><div class="note">${inc? fmtN(sav/inc*100,0)+'% від доходу '+fmt(inc):''}</div></div>`;
+    $('#budTotal').innerHTML = barRow({g:null, name:'Усі витрати місяця', b:totB, s:totS, pace, total:true});
+    const now = new Date(), daysLeft = new Date(now.getFullYear(), now.getMonth()+1, 0).getDate() - now.getDate() + 1;
+    $('#budPaceNote').textContent = pace<1 && pace>0 ? `Минуло ${fmtN(pace*100,0)}% місяця, витрачено ${fmtN(totB?totS/totB*100:0,0)}% бюджету. До кінця місяця ${daysLeft} дн.: можна витрачати близько ${fmt(Math.max(0,left)/daysLeft)} на день.` : (pace===0 ? 'Місяць ще не почався.' : budgetMonth()===now.getFullYear()*12+now.getMonth() ? `Сьогодні останній день місяця: витрачено ${fmtN(totB?totS/totB*100:0,0)}% бюджету.` : `Місяць закрито: ${fmtN(totB?totS/totB*100:0,0)}% бюджету.`);
+  } else $('#budStatus').innerHTML = '';
+
+  renderDonut(B, spent, pace, avg);
+
+  // afford selector
+  const sel = $('#aGroup'), cur = sel.value;
+  const allG = [...new Set([...Object.keys(B), ...D.catGroup])].sort((a,b)=>a.localeCompare(b,'ru'));
+  sel.innerHTML = allG.map(g=>`<option ${g===(cur||'Розваги')?'selected':''}>${esc(g)}</option>`).join('');
+  renderAfford();
+
+  // history
+  let hh = '<thead><tr><th>Місяць</th><th class="n">Витрачено</th><th class="n">Бюджет</th><th class="n">Дохід</th><th></th></tr></thead><tbody>';
+  for (let k=0;k<6;k++){ const m = MAX_YM-k; const sp = Object.values(spentIn(m)).reduce((s,v)=>s+v,0);
+    const ic = TX.filter(t=>t.inc && t.ym===m && !t.oneoff).reduce((s,t)=>s+V(t),0);
+    const st = !has ? '' : sp<=totB ? '<span class="pill good">у межах</span>' : `<span class="pill ${overSev(sp,totB,false)==='soft'?'neutral':'warn'}">+${fmt(sp-totB)}</span>`;
+    hh += `<tr><td>${ymLong(m)}</td><td class="n">${fmt(sp)}</td><td class="n">${has?fmt(totB):'—'}</td><td class="n">${fmt(ic)}</td><td class="n">${st}</td></tr>`; }
+  $('#tblBudHist').innerHTML = hh + '</tbody>';
+}
+/* ---- budget donut: sector angle = budget share, radial fill = share of that budget already spent ---- */
+let donutSel = null, donutHover = null, DON = null, MINOR_TONE = {};
+// legend/sector order is fixed once shown, so editing an amount doesn't make rows jump; re-sorted only on request
+let LEG_ORDER = null;
+// minor groups share the neutral, alternating two tones so neighbouring sectors stay apart
+const groupColorVar = g => GROUP_COLOR[g] || MINOR_TONE[g] || '--s0';
+function arcPath(r0, r1, a0, a1){
+  const P = (r,a) => [(r*Math.cos(a)).toFixed(2), (r*Math.sin(a)).toFixed(2)];
+  const L = a1-a0 > Math.PI ? 1 : 0, [x0,y0]=P(r1,a0), [x1,y1]=P(r1,a1), [x2,y2]=P(r0,a1), [x3,y3]=P(r0,a0);
+  return `M${x0} ${y0}A${r1} ${r1} 0 ${L} 1 ${x1} ${y1}L${x2} ${y2}A${r0} ${r0} 0 ${L} 0 ${x3} ${y3}Z`;
+}
+function renderDonut(B, spent, pace, avg){
+  let budgeted = Object.keys(B).filter(g => +B[g] > 0).sort((x,y)=>B[y]-B[x]);
+  let unbudgeted = Object.keys(spent).filter(g => !(+B[g] > 0) && spent[g] > 0.5).sort((x,y)=>spent[y]-spent[x]);
+  if (!LEG_ORDER) LEG_ORDER = [...budgeted, ...unbudgeted];
+  [...budgeted, ...unbudgeted].forEach(g => { if (!LEG_ORDER.includes(g)) LEG_ORDER.push(g); });
+  const pos = g => LEG_ORDER.indexOf(g);
+  budgeted.sort((x,y)=>pos(x)-pos(y)); unbudgeted.sort((x,y)=>pos(x)-pos(y));
+  MINOR_TONE = {}; let t = 0; [...budgeted, ...unbudgeted].forEach(g => { if (!GROUP_COLOR[g]) MINOR_TONE[g] = (t++ % 2) ? '--s0b' : '--s0'; });
+  const monthOk = Object.values(spent).reduce((s,v)=>s+v,0) <= budgeted.reduce((s,g)=>s+B[g],0);
+  DON = {B, spent, pace, avg, budgeted, monthOk};
+  drawDonut();
+  const row = (g, b, s) => {
+    const r = b - s, w = b ? Math.min(100, s/b*100) : 100;
+    const sev = overSev(s, b, monthOk);
+    const cls = !b ? 'soft' : sev ? sev : s>b*pace*1.1 && pace<1 ? 'soft' : '';
+    const pill = !b ? '' : r>=0 ? `<span class="left-pill ok">лишилося ${fmt(r)}</span>` : `<span class="left-pill over ${sev}">понад ${fmt(-r)}</span>`;
+    const id = 'bud-' + Math.abs([...g].reduce((h,c)=>h*31+c.charCodeAt(0)|0,7));
+    return `<div class="lg-row" data-g="${esc(g)}">
+      <label class="nm" for="${id}"><span class="swatch" style="background:var(${groupColorVar(g)})"></span>${esc(g)}<small>зазвичай ${fmt(avg[g]||0)}/міс${goalOf(g) ? ` · ціль ${fmt(goalInfo(g).target)}${goalInfo(g).by ? ' до ' + esc(goalInfo(g).by) : ''}` : ''}</small></label>
+      <input type="text" min="0" step="5" inputmode="decimal" id="${id}" data-g="${esc(g)}" value="${b?Math.round(b):''}" placeholder="задати" aria-label="Бюджет: ${esc(g)}, ${SYM()}">
+      <div class="pr"><div class="meter"><div class="fill ${cls}" style="width:${w}%"></div>${b&&pace<1&&pace>0?`<div class="pace" style="left:${pace*100}%"></div>`:''}</div>
+        <div class="line"><span>витрачено <b>${fmt(s)}</b>${b?` · ${fmtN(s/b*100,0)}%`:''}</span>${pill}</div></div></div>`;
+  };
+  const totB = budgeted.reduce((s,g)=>s+B[g],0), totS = Object.values(spent).reduce((s,v)=>s+v,0);
+  let h = `<div class="lg-head"><span>Група · <button class="linkbtn" id="legSort" type="button" style="text-transform:none;letter-spacing:0">упорядкувати за сумою</button></span><span style="text-align:right">Бюджет</span><span>Витрачено</span></div>`;
+  budgeted.forEach(g => h += row(g, B[g], spent[g]||0));
+  if (unbudgeted.length){ h += `<div class="lg-sep">Без бюджету — впишіть суму, щоб додати</div>`; unbudgeted.forEach(g => h += row(g, 0, spent[g])); }
+  h += `<div class="lg-sep" style="display:flex;justify-content:space-between"><span>Разом</span><span class="mono">${fmt(totS)} з ${fmt(totB)}</span></div>`;
+  const box = $('#budRows'); box.innerHTML = h;
+  $('#legSort').onclick = () => { LEG_ORDER = null; renderBudget(); };
+  box.querySelectorAll('.lg-row').forEach(r => {
+    r.onmouseenter = () => setHover(r.dataset.g);
+    r.onmouseleave = () => setHover(null);
+  });
+  box.querySelectorAll('input').forEach(inp => {
+    inp.addEventListener('keydown', e => { if (e.key==='Enter') inp.blur(); if (e.key==='Escape'){ inp.value = inp.defaultValue; inp.blur(); } });
+    inp.addEventListener('focus', () => setHover(inp.dataset.g));
+    inp.addEventListener('blur', () => setHover(null));
+    inp.addEventListener('change', async () => {
+      const g = inp.dataset.g, v = inp.value==='' ? 0 : Math.max(0, +inp.value);
+      await saveGroupBudget(g, v ? v/budK() : null); renderBudget();
+    });
+  });
+  markLegend();
+}
+function drawDonut(){
+  if (!DON) return;
+  const {B, spent, pace, budgeted} = DON, R0 = 92, R1 = 160, PAD = 0.012;
+  const focus = donutHover || donutSel;
+  const totB = budgeted.reduce((s,g)=>s+B[g],0), totS = Object.values(spent).reduce((s,v)=>s+v,0);
+  let svg = '', a = -Math.PI/2;
+  budgeted.forEach(g => {
+    const b = B[g], s = spent[g]||0, frac = Math.min(1, s/b), da = b/totB*2*Math.PI;
+    const a0 = a + PAD, a1 = a + da - PAD; a += da;
+    if (a1 <= a0) return;
+    const col = css(groupColorVar(g)), rf = R0 + (R1-R0)*frac;
+    let part = `<path d="${arcPath(R0,R1,a0,a1)}" fill="${col}" fill-opacity="0.22"/>`;
+    if (frac > 0) part += `<path d="${arcPath(R0,rf,a0,a1)}" fill="${col}"/>`;
+    const sev = overSev(s, b, DON.monthOk);
+    if (sev){ const ex = 4 + 12*Math.min(1,(s-b)/b); part += `<path d="${arcPath(R1+3,R1+3+ex,a0,a1)}" fill="${css(sev==='soft'?'--over-soft':sevColor(sev))}"/>`; }
+    if (a1-a0 > 0.2){ const am = (a0+a1)/2, rl = R1 + (s>b?30:16);
+      part += `<text x="${(rl*Math.cos(am)).toFixed(1)}" y="${(rl*Math.sin(am)).toFixed(1)}" text-anchor="middle" dominant-baseline="middle" font-size="11" style="fill:var(${sev && sev!=='soft' ? sevColor(sev) : '--ink-2'})">${Math.round(s/b*100)}%</text>`; }
+    svg += `<g class="sec${g===focus?' on':''}" data-g="${esc(g)}"><title>${esc(g)}: ${fmt(s)} з ${fmt(b)}</title>${part}</g>`;
+  });
+  if (pace>0 && pace<1) svg += `<circle r="${R0+(R1-R0)*pace}" fill="none" stroke="${css('--ink')}" stroke-opacity=".55" stroke-width="1.3" stroke-dasharray="3 4" pointer-events="none"/>`;
+  const cg = focus && (B[focus] || spent[focus]) ? focus : null;
+  const cb = cg ? (+B[cg]||0) : totB, cs = cg ? (spent[cg]||0) : totS, cl = cb - cs;
+  const title = cg || 'Увесь місяць';
+  svg += `<text y="-30" text-anchor="middle" font-size="12.5">${esc(title.length>22?title.slice(0,21)+'…':title)}</text>
+    <text class="c1" y="2" text-anchor="middle" font-size="26">${fmt(cs)}</text>
+    <text y="24" text-anchor="middle" font-size="12">${cb?'з '+fmt(cb):'без бюджету'}</text>
+    <text y="46" text-anchor="middle" font-size="12.5" style="fill:var(${cl>=0?'--good':sevColor(overSev(cs,cb,DON.monthOk))});font-weight:600">${cb ? (cl>=0?'лишилося '+fmt(cl):'понад '+fmt(-cl)) : ''}</text>`;
+  const el = $('#donut'); el.innerHTML = svg; el.classList.toggle('focus', !!focus);
+  el.querySelectorAll('.sec').forEach(n => {
+    n.onmouseenter = () => setHover(n.dataset.g);
+    n.onmouseleave = () => setHover(null);
+    n.onclick = () => { donutSel = donutSel===n.dataset.g ? null : n.dataset.g; drawDonut(); markLegend();
+      if (donutSel){ const r = $('#budRows').querySelector(`.lg-row[data-g="${CSS.escape(donutSel)}"]`); if (r) r.scrollIntoView({block:'nearest', behavior:'smooth'}); } };
+  });
+}
+function setHover(g){ donutHover = g; drawDonut(); markLegend(); }
+function markLegend(){ const f = donutHover || donutSel; $('#budRows').querySelectorAll('.lg-row').forEach(r => r.classList.toggle('on', r.dataset.g===f)); }
+function barRow({g, name, b, s, pace, avg, total}){
+  const r = b - s, w = b ? Math.min(100, s/b*100) : (s?100:0);
+  const sev = overSev(s, b, !total);
+  const cls = !b ? 'soft' : sev ? sev : s>b*pace*1.1 && pace<1 ? 'soft' : '';
+  const sw = total ? '' : `<span class="swatch" style="background:var(${GROUP_COLOR[g]||'--s0'})"></span>`;
+  const leftPill = !b ? `<span class="left-pill none">без бюджету</span>` : r>=0 ? `<span class="left-pill ok">лишилося ${fmt(r)}</span>` : `<span class="left-pill over ${sev}">понад ${fmt(-r)}</span>`;
+  const amt = total ? `<span class="bedit">${fmt(b)}</span><span class="hint">бюджет</span>`
+    : `<button class="bedit ${b?'':'empty'}" data-g="${esc(g)}" title="Змінити бюджет групи">${b?fmt(b):'задати'}</button><span class="hint">${b?'на місяць':''}</span>`;
+  return `<div class="brow${total?' total':''}"><div class="nm">${sw}${esc(name)}${avg!=null?`<small>зазвичай ${fmt(avg)}/міс</small>`:''}</div>
+    <div class="barcol"><div class="meter${b?'':' nob'}"><div class="fill ${cls}" style="width:${w}%"></div>${b&&pace<1&&pace>0?`<div class="pace" style="left:${pace*100}%"></div>`:''}</div>
+    <div class="under"><span>витрачено <b>${fmt(s)}</b>${b?` · ${fmtN(s/b*100,0)}%`:''}</span>${leftPill}</div></div>
+    <div class="bamt">${amt}</div></div>`;
+}
+function startInlineEdit(btn){
+  const g = btn.dataset.g, k = budK(), cur = budget && budget.groups ? (+budget.groups[g]||0)*k : 0;
+  const box = btn.parentElement;
+  box.innerHTML = `<input type="text" inputmode="decimal" min="0" step="5" id="inl-${Math.abs([...g].reduce((h,c)=>h*31+c.charCodeAt(0)|0,7))}" value="${cur?Math.round(cur):''}" aria-label="Бюджет: ${esc(g)}"><span class="hint">Enter — зберегти</span>`;
+  const inp = box.querySelector('input'); inp.focus(); inp.select();
+  let done = false;
+  const finish = async save => { if (done) return; done = true;
+    if (save && inp.value !== '' && Math.round(+inp.value) !== Math.round(cur)) await saveGroupBudget(g, +inp.value/k);
+    else if (save && inp.value === '' && cur) await saveGroupBudget(g, null);
+    renderBudget(); };
+  inp.addEventListener('keydown', e => { if (e.key==='Enter') finish(true); if (e.key==='Escape') finish(false); });
+  inp.addEventListener('blur', () => finish(true));
+}
+async function saveGroupBudget(g, usdValue){
+  const base = budget && budget.groups ? budget : {groups:{}, savings:0, income:Math.round(avgL12Income()/budK())};
+  const groups = {...base.groups};
+  if (usdValue==null) delete groups[g]; else groups[g] = Math.round(usdValue*100)/100;
+  const doc = {...base, groups, updatedAt:new Date().toISOString()};
+  budget = doc; draft = null;
+  try { if (db) await db.doc('budget/plan').set(doc); else lsSet('budget', doc); $('#budSaved').textContent = db ? 'Збережено для всіх' : 'Збережено лише в цьому браузері'; }
+  catch(e){ $('#budSaved').textContent = 'Не вдалося зберегти: ' + (e.message||e.code); }
+}
+function renderAfford(){
+  const amt = +$('#aAmt').value || 0, g = $('#aGroup').value, ym = budgetMonth();
+  const el = $('#aAnswer');
+  if (!budget || !budget.groups || !Object.keys(budget.groups).length){ el.className='answer'; el.innerHTML='Спочатку задайте бюджет нижче, тоді тут буде відповідь.'; return; }
+  const kB = budK(), spent = spentIn(ym), B = Object.fromEntries(Object.entries(budget.groups).map(([g,v])=>[g,(+v||0)*kB]));
+  const gl = (+B[g]||0) - (spent[g]||0);
+  const totB = Object.values(B).reduce((s,v)=>s+(+v||0),0), totS = Object.values(spent).reduce((s,v)=>s+v,0);
+  const tl = totB - totS, sav = (+budget.savings||0)*kB;
+  let cls, msg;
+  if (amt<=0){ cls=''; msg='Введіть суму покупки.'; }
+  else if (amt <= gl){ cls='good'; msg=`<b>Так.</b> Вкладається в бюджет «${esc(g)}»: після покупки в групі залишиться ${fmt(gl-amt)}.`; }
+  else if (amt <= tl){ cls='warn'; msg=`<b>Можна, але коштом інших груп.</b> В «${esc(g)}» ${gl>0?'лишилося тільки '+fmt(gl):'бюджет уже вичерпано'}, а в загальному бюджеті місяця вільно ${fmt(tl)}. Після покупки залишиться ${fmt(tl-amt)} на все інше до кінця місяця.`; }
+  else if (amt <= tl + sav){ cls='crit'; msg=`<b>Лише з грошей, які збиралися відкласти.</b> Загальний бюджет місяця ${tl>0?'дозволяє ще '+fmt(tl):'уже вичерпано'}; покупка зменшить заощадження місяця на ${fmt(amt-Math.max(0,tl))} з ${fmt(sav)}.`; }
+  else { const months = sav>0 ? Math.ceil(amt/sav) : 0; cls='crit'; msg=`<b>Зараз немає.</b> Це більше, ніж вільний бюджет і заплановані заощадження разом (${fmt(Math.max(0,tl)+sav)}).${months?` Якщо збирати на це окремо, піде близько ${months} міс. заощаджень — або закладіть суму в бюджет наступних місяців.`:''}`; }
+  el.className = 'answer ' + cls; el.innerHTML = msg;
+}
+let draft = null; // kept for compatibility with older handlers
+let budgetSeeded = false;
+/* ---- Conscious Spending Plan (Ramit Sethi): four buckets ---- */
+const BUCKETS = [
+  {id:'fixed',  name:'Постійні витрати',        lo:50, hi:60, color:'--s1', hint:'житло, продукти, податки, зв’язок, здоров’я, транспорт'},
+  {id:'invest', name:'Інвестиції',                lo:10, hi:10, color:'--s7', hint:'довгострокові вкладення, яких не торкаються'},
+  {id:'save',   name:'Заощадження',                lo:5,  hi:10, color:'--s3', hint:'подушка й цілі'},
+  {id:'free',   name:'Витрати без почуття провини',     lo:20, hi:35, color:'--s2', hint:'кафе, ігри, розваги, краса, одяг, подорожі, хобі'},
+];
+const DEFAULT_BUCKET = Object.fromEntries((CFG.categories||[]).filter(c => c.bucket).map(c => [c.name, c.bucket]));
+// savings goals on funds: budget.goals = {group:{target:usd, by:'YYYY-MM', what}}
+const MONTHS_DAT = MONTHS_GEN;   // «до листопада 2028»
+const goalOf = g => budget && budget.goals && budget.goals[g] && +budget.goals[g].target > 0 ? budget.goals[g] : null;
+const ymOfKey = k => { const [y,m] = k.split('-').map(Number); return y*12 + m - 1; };
+function goalInfo(g, have){
+  const G = goalOf(g); if (!G) return null;
+  const k = budK(), target = +G.target*k, pct = Math.min(100, Math.max(0, (have||0)/target*100));
+  if (!G.by) return {target, by:null, what: G.what || '', need:null, pct, left:null};
+  let byYM = ymOfKey(G.by); if (+G.every > 0) while (byYM < nowYM()) byYM += +G.every;
+  const left = Math.max(1, byYM - nowYM());
+  return {target, by: MONTHS_DAT[byYM%12] + ' ' + Math.floor(byYM/12), what: G.what || '', need: Math.max(0, target - (have||0))/left, pct, left};
+}
+const bucketOf = g => (budget && budget.buckets && budget.buckets[g]) || DEFAULT_BUCKET[g] || 'free';
+async function saveBudgetPatch(patch){
+  const base = budget && budget.groups ? budget : {groups:{}, savings:0, income:Math.round(avgL12Income()/budK())};
+  const doc = {...base, ...patch, updatedAt:new Date().toISOString()};
+  budget = doc;
+  try { if (db) await db.doc('budget/plan').set(doc); else lsSet('budget', doc); $('#budSaved').textContent = db ? 'Збережено для всіх' : 'Збережено лише в цьому браузері'; }
+  catch(e){ $('#budSaved').textContent = 'Не вдалося зберегти: ' + (e.message||e.code); }
+}
+function renderEditor(){
+  const kB = budK(), ym = budgetMonth();
+  const G = budget && budget.groups ? budget.groups : {};
+  const planInc = (+(budget&&budget.income)||0)*kB, planSave = (+(budget&&budget.savings)||0)*kB, planInv = (+(budget&&budget.investments)||0)*kB;
+  const spent = spentIn(ym), avg = avgL12ByGroup();
+  const incM = TX.filter(t=>t.inc && !t.oneoff && t.ym===ym).reduce((s,t)=>s+V(t),0);
+  const incA = avgL12Income();
+  const sumBy = (obj, b) => Object.entries(obj).filter(([g])=>bucketOf(g)===b).reduce((s,[,v])=>s+(+v||0),0);
+  const plan = {fixed: sumBy(G,'fixed')*kB, free: sumBy(G,'free')*kB, invest: planInv, save: planSave};
+  const month = {fixed: sumBy(spent,'fixed'), free: sumBy(spent,'free'), invest: null, save: null};
+  const avgB = {fixed: sumBy(avg,'fixed'), free: sumBy(avg,'free'), invest: null, save: null};
+  month.save = incM - month.fixed - month.free; avgB.save = incA - avgB.fixed - avgB.free;
+  const pct = (v, base) => base>0 && v!=null ? v/base*100 : null;
+  const pctTxt = p => p==null ? '—' : fmtN(p,0) + '%';
+  const status = (b, p) => {
+    if (p==null) return '<span class="pill neutral">не відстежується</span>';
+    if (p < b.lo - 0.5) return `<span class="pill warn">нижче за орієнтир</span>`;
+    if (p > b.hi + 0.5) return `<span class="pill ${b.id==='fixed'||b.id==='free'?'warn':'good'}">вище за орієнтир</span>`;
+    return '<span class="pill good">у нормі</span>';
+  };
+  const meter = (b, p) => { const max = 80, l = b.lo/max*100, w = Math.max(1,(b.hi-b.lo)/max*100);
+    return `<div class="bmeter"><div class="band" style="left:${l}%;width:${w}%"></div>${p!=null?`<div class="dot" style="left:${Math.min(100,Math.max(0,p/max*100))}%;background:var(${b.color})"></div>`:''}</div>`; };
+  let h = `<thead><tr><th>Кошик</th><th class="n">Орієнтир</th><th class="n">План</th><th class="n">${esc(ymLong(ym))}</th><th class="n">У середньому за 12 міс</th><th>Де ми</th></tr></thead><tbody>`;
+  BUCKETS.forEach(b => {
+    const pp = pct(plan[b.id], planInc), pm = pct(month[b.id], incM||planInc), pa = pct(avgB[b.id], incA);
+    const planCell = b.id==='invest' ? `<input type="text" inputmode="decimal" min="0" step="10" id="pInv" value="${Math.round(planInv)}" aria-label="Інвестиції на місяць"><small>${pctTxt(pp)}</small>`
+                   : b.id==='save' ? `<input type="text" inputmode="decimal" min="0" step="10" id="pSave" value="${Math.round(planSave)}" aria-label="Заощадження на місяць"><small>${pctTxt(pp)}</small>`
+                   : `${fmt(plan[b.id])}<small>${pctTxt(pp)}</small>`;
+    const mCell = month[b.id]==null ? '—' : `${fmt(month[b.id])}<small>${pctTxt(pm)}</small>`;
+    const aCell = avgB[b.id]==null ? '—' : `${fmt(avgB[b.id])}<small>${pctTxt(pa)}</small>`;
+    h += `<tr><td><div class="bk"><i style="background:var(${b.color})"></i><div>${b.name}<small>${b.hint}</small></div></div></td>
+      <td class="n">${b.lo===b.hi?'≈ '+b.lo:b.lo+'–'+b.hi}%</td><td class="n">${planCell}</td><td class="n">${mCell}</td><td class="n">${aCell}</td>
+      <td style="min-width:150px">${status(b, b.id==='invest'?(planInv>0?pa:null):pa)}${meter(b, b.id==='invest'?null:pa)}</td></tr>`;
+  });
+  const planned = plan.fixed + plan.free + planInv + planSave, gap = planInc - planned;
+  h += `<tr class="total"><td>Дохід</td><td></td><td class="n"><input type="text" inputmode="decimal" min="0" step="10" id="pInc" value="${Math.round(planInc)}" aria-label="Очікуваний дохід на місяць"></td><td class="n">${fmt(incM)}</td><td class="n">${fmt(incA)}</td>
+    <td>${gap>=0.5?`<span class="pill warn">не розподілено ${fmt(gap)}</span>`:gap<=-0.5?`<span class="pill crit">план більший за дохід на ${fmt(-gap)}</span>`:'<span class="pill good">розподілено повністю</span>'}</td></tr>`;
+  $('#tblBuckets').innerHTML = h + '</tbody>';
+  $('#bucketNote').textContent = (S.cur==='EUR' ? `Бюджет зберігається в доларах; тут він у євро за курсом ${fmtN(1/eurPerUsd(),4)} $/€. ` : '') +
+    'Шкала: зелена смуга — орієнтир Сеті, точка — де ви в середньому за 12 місяців. Факт заощаджень — дохід мінус витрати.';
+  const onNum = (id, field) => { const el = $('#'+id); el.addEventListener('keydown', e => { if (e.key==='Enter') el.blur(); });
+    el.addEventListener('change', async () => { await saveBudgetPatch({[field]: Math.max(0, +el.value||0)/kB}); renderBudget(); }); };
+  onNum('pInc','income'); onNum('pSave','savings'); onNum('pInv','investments');
+  // group -> bucket mapping
+  const groups = [...new Set([...Object.keys(G), ...Object.keys(avg).filter(g=>avg[g]>0.5)])].sort((a,b)=>(avg[b]||0)-(avg[a]||0));
+  $('#bucketMap').innerHTML = groups.map((g,i) => `<label for="bm-${i}"><span><span class="swatch" style="background:var(${groupColorVar(g)})"></span>${esc(g)}</span>
+    <select id="bm-${i}" data-g="${esc(g)}"><option value="fixed" ${bucketOf(g)==='fixed'?'selected':''}>постійні</option><option value="free" ${bucketOf(g)==='free'?'selected':''}>без почуття провини</option></select></label>`).join('');
+  $('#bucketMap').querySelectorAll('select').forEach(sel => sel.onchange = async () => {
+    const buckets = {...((budget&&budget.buckets)||{}), [sel.dataset.g]: sel.value};
+    await saveBudgetPatch({buckets}); renderBudget(); });
+}
+let fillArmed = false;
+async function fillByAverage(){
+  const btn = $('#btnFillAvg');
+  if (budget && budget.groups && Object.keys(budget.groups).length && !fillArmed){
+    fillArmed = true; btn.textContent = 'Точно замінити всі суми груп середніми? Натисніть ще раз'; btn.classList.add('primary');
+    setTimeout(()=>{ fillArmed = false; btn.textContent = 'Заповнити бюджети груп за середнім за 12 міс'; btn.classList.remove('primary'); }, 6000);
+    return;
+  }
+  fillArmed = false; btn.textContent = 'Заповнити бюджети груп за середнім за 12 міс'; btn.classList.remove('primary');
+  const k = budK(), avg = avgL12ByGroup(), groups = {};
+  Object.entries(avg).forEach(([g,v]) => { if (v>=1) groups[g] = Math.round(v/5)*5/k; });
+  const patch = {groups}; if (!(budget && budget.income)) patch.income = avgL12Income()/k;
+  LEG_ORDER = null; await saveBudgetPatch(patch); renderBudget();
+}
+
+/* ============ ADVICE ============ */
+function renderAdvice(){
+  $('#adviceBody').innerHTML = `
+<h2>Як це працює</h2>
+<p>Бюджет побудовано за схемою Раміта Сеті «усвідомлені витрати»: дохід ділиться на чотири кошики — постійні витрати, інвестиції, заощадження та витрати без почуття провини. Кошики видно на вкладці «Бюджет».</p>
+<h3>Три ролі категорій</h3>
+<ul>
+<li><b>Звичайні</b> — їжа, житло, транспорт. У кожної місячний ліміт; смужка показує, чи вкладаєтеся ви в темп місяця.</li>
+<li><b>Забаганки</b> — розваги, одяг, хобі. Замість ліміту за категоріями в кожної людини своя сума на місяць. Що не витрачено, переноситься на наступний місяць без обмежень: можна збирати на щось велике.</li>
+<li><b>Фонди</b> — рідкісні, але неминучі витрати: податки раз на квартал, поїздки, техніка, подарунки. Щомісяця в них відкладається частина доходу, а витрати йдуть із накопиченого. Фонд може мати ціль і строк — тоді видно, скільки вже є і скільки відкладати, щоб устигнути.</li>
+</ul>
+<h3>Щомісяця</h3>
+<ol>
+<li>1-го числа «Кишенька» пропонує розкласти гроші по фондах і в подушку — одна кнопка, суми можна виправити.</li>
+<li>Протягом місяця кожна витрата вноситься в «Кишеньку» з телефона: сума, рахунок, категорія.</li>
+<li>Коли місяць закінчився, «Кишенька» показує залишок: що не витрачено зі звичайних категорій і не розподілено з доходу. Залишок іде в подушку, а коли її зібрано — у ціль.</li>
+</ol>
+<h3>Подушка</h3>
+<p>Подушка — вільні гроші на чорний день, зазвичай 3–6 місяців обов’язкових витрат. Поки вона менша за ціль, заощадження й залишки йдуть у неї. Понад ціль — у вибраний фонд-ціль.</p>
+<h3>Корисно</h3>
+<ul>
+<li>Раз на місяць завантажуйте резервну копію на вкладці «Дані» і зберігайте її поза браузером.</li>
+<li>Якщо залишок на рахунку розійшовся з банком — «виправити» біля рахунку, різниця запишеться окремою операцією.</li>
+<li>Рідкісні великі платежі (податок за квартал, запас наперед) можна «розмазати» на кілька місяців на вкладці «Операції», щоб графіки не стрибали.</li>
+</ul>`;
+}
+
+/* ============ BACKUP ============ */
+let BKMETA = null;
+const BK_DOCS = ['budget/plan', 'pocket/config'], BK_COLLS = ['pocketTx', 'pocketFunds', 'spread'];
+const isoOfDay = d => new Date(BASE + d*DAY).toISOString().slice(0,10);
+async function saveFile(filename, text){
+  if (downloads){ try { await downloads.save({filename, data: text}); return true; } catch(e){ if (e && e.code==='declined') return false; if (!['unavailable','not_granted','capability_disabled','capability_removed'].includes(e && e.code)) throw e; } }
+  const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([text], {type: filename.endsWith('.csv') ? 'text/csv' : 'application/json'}));
+  a.download = filename; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000); return true;
+}
+async function collectBackup(){
+  const docs = {};
+  for (const p of BK_DOCS){ const sn = await db.doc(p).get(); if (sn.exists) docs[p] = sn.data(); }
+  for (const c of BK_COLLS){ const q = await db.collection(c).get(); q.docs.forEach(d => docs[c + '/' + d.id] = d.data()); }
+  return {app: 'family-budget-pocket', version: 1, exportedAt: new Date().toISOString(), docs, dataset: D};
+}
+function renderBackupInfo(){
+  const last = BKMETA && BKMETA.at ? new Date(BKMETA.at) : null, days = last ? Math.floor((Date.now() - last)/864e5) : null;
+  const txt = last ? `остання копія ${last.toLocaleDateString('uk-UA')}${days ? ` (${days} дн. тому)` : ''}` : 'резервних копій ще не було';
+  const i = $('#bkInfo'); if (i) i.textContent = txt;
+  const n = $('#pkBackupNote');
+  if (n) n.innerHTML = (days == null || days >= 30) ? `${last ? 'Резервну копію не робили ' + days + ' дн.' : 'Резервну копію ще не робили.'} <button class="linkbtn" type="button" id="pkBackupGo">Завантажити зараз</button>` : '';
+  const g = $('#pkBackupGo'); if (g) g.onclick = () => doBackup(g);
+}
+async function doBackup(btn){
+  const st = $('#bkStatus');
+  if (!db){ st.textContent = 'Немає доступу до даних сторінки.'; return; }
+  try {
+    if (btn) btn.disabled = true; st.textContent = 'Збираю дані…';
+    const b = await collectBackup(), name = `budget-backup-${todayISO()}.json`;
+    const ok = await saveFile(name, JSON.stringify(b));
+    if (ok){ st.textContent = `Збережено: ${name}, ${RECS(Object.keys(b.docs).length)} + історія (${OPS(b.dataset ? b.dataset.tx.length : 0)}). Покладіть файл кудись поза браузером: Google Диск, iCloud, пошта собі.`;
+      try { await db.doc('meta/backup').set({at: new Date().toISOString(), docs: Object.keys(b.docs).length}); } catch(e){} }
+    else st.textContent = 'Збереження скасовано.';
+  } catch(e){ st.textContent = 'Не вдалося: ' + (e.message || e.code || e); }
+  finally { if (btn) btn.disabled = false; }
+}
+async function doCsv(){
+  const st = $('#bkStatus');
+  try {
+    const q = v => { const t = v == null ? '' : String(v); return /[",;\n]/.test(t) ? '"' + t.replace(/"/g, '""') + '"' : t; };
+    const rows = [['Дата','Тип','Категорія','Група','Рахунок','Сума','Валюта','USD','EUR','Рахунок 2','Сума 2','Валюта 2','Мітки','Хто','Нотатка','Джерело']];
+    TX.filter(t => !t.pocket).forEach(t => rows.push([isoOfDay(t.day), t.inc ? 'дохід' : 'витрата', t.name, t.group, t.acct, t.amt, t.cur, t.usd, t.eur, '', t.amt2 ?? '', t.cur2 ?? '', t.tags.join(', '), '', t.note, 'CoinKeeper']));
+    PK.slice().sort((a,b) => a.date < b.date ? -1 : 1).forEach(o => { const v = o.type==='exp' || o.type==='inc' ? pkConv(+o.amount, o.cur, dayOfISO(o.date), o.type==='exp' ? +o.eur||0 : 0) : {usd:'', eur:''};
+      rows.push([o.date, {exp:'витрата', inc:'дохід', tr:'переказ', adj:'виправлення залишку'}[o.type] || o.type, o.type==='inc' ? (o.source||'Зарплата') : (o.group||''), o.type==='exp' ? o.group : '', o.account, o.amount, o.cur, v.usd, v.eur,
+        o.account2||'', o.amount2||'', o.account2 ? (((PKCFG && PKCFG.accounts || []).find(a => a.name===o.account2) || {}).cur || '') : '', (o.tags||[]).join(', '), o.who||'', o.note||'', 'Кишенька']); });
+    const ok = await saveFile(`budget-operations-${todayISO()}.csv`, '﻿' + rows.map(r => r.map(q).join(',')).join('\n'));
+    st.textContent = ok ? `Збережено ${OPS(rows.length - 1)}.` : 'Збереження скасовано.';
+  } catch(e){ st.textContent = 'Не вдалося: ' + (e.message || e.code || e); }
+}
+let bkPending = null;
+async function readBackupFile(file){
+  const st = $('#bkStatus');
+  try {
+    const b = JSON.parse(await file.text());
+    if (!b || b.app !== 'family-budget-pocket' || !b.docs) throw new Error('це не резервна копія цієї сторінки');
+    bkPending = b; const n = Object.keys(b.docs).length, pk = Object.keys(b.docs).filter(k => k.startsWith('pocketTx/')).length;
+    st.innerHTML = `Резервна копія від ${new Date(b.exportedAt).toLocaleString('uk-UA')}: ${RECS(n)}, з них ${OPS(pk)} «Кишеньки». Записи з тими самими номерами буде замінено, решта залишиться. <button class="btn primary" id="bkApply" type="button">Відновити</button> <button class="btn" id="bkCancel" type="button">Скасувати</button>`;
+    $('#bkApply').onclick = applyBackup; $('#bkCancel').onclick = () => { bkPending = null; st.textContent = ''; };
+  } catch(e){ st.textContent = 'Не вдалося прочитати файл: ' + (e.message || e); }
+}
+async function applyBackup(){
+  const st = $('#bkStatus'), b = bkPending; if (!b || !db) return;
+  try {
+    const paths = Object.keys(b.docs).filter(p => p !== 'dataset/current' || !(db.offline || window.__saveDataset)); let i = 0;
+    for (const p of paths){ await db.doc(p).set(b.docs[p]); if (++i % 20 === 0) st.textContent = `Відновлюю… ${i} з ${paths.length}`; }
+    if (b.dataset && b.dataset.tx){ applyData(b.dataset);
+      if (window.__saveDataset){ st.textContent = 'Зберігаю історію операцій…'; await window.__saveDataset(b.dataset); }
+      if (db.offline){ try { localStorage.setItem('pocket-offline-dataset', JSON.stringify(b.dataset)); } catch(e){} } }
+    bkPending = null; st.textContent = `Готово: відновлено ${RECS(paths.length)}${b.dataset ? ' та історія операцій' : ''}.`;
+  } catch(e){ st.textContent = 'Відновлення перервалося: ' + (e.message || e.code || e) + '. Можна запустити ще раз — повтор нічого не подвоїть.'; }
+}
+
+/* ============ TEMPLATE: config, empty start, setup ============ */
+const cfgRates = () => Object.assign({}, CFG.rates || {}, (PKCFG && PKCFG.rates) || {});
+function emptyDataset(){   // no history yet: the pocket's own operations become the history
+  const t = todayISO(), r = cfgRates(), rates = {start:t, end:t};
+  ['USD','EUR', ...Object.keys(r)].forEach(c => { rates[c] = [c===PIVOT ? 1 : (+r[c] || (c==='USD' ? 1 : 1))]; });
+  const cats = (CFG.categories||[]).map(c => c.name);
+  return {synthetic:true, generated:t, source:'Кишенька', lastTx:t, cats, catGroup:cats, groups:cats, srcs:[], srcGroup:[], accts:[], curs:[], tags:[],
+    cols:['day','inc','cat','acct','amt','cur','usd','tags','note','amt2','cur2','eur','flags'], tx:[], rates, balances:[], envelopes:[], deposits:[], ckBudgets:[]};
+}
+function defaultBudget(){
+  const groups = {}, roles = {}, goals = {};
+  (CFG.categories||[]).forEach(c => { groups[c.name] = +c.budget || 0; if (c.goal) goals[c.name] = c.goal; });
+  return {groups, income: +CFG.income || 0, savings: +CFG.savings || 0, roles, goals, allowances: CFG.allowances || {},
+    ...(CFG.cushion ? {cushion: CFG.cushion} : {}), by:'шаблон', updatedAt: new Date().toISOString()};
+}
+function applyConfigUI(){
+  const title = CFG.title || 'Бюджет'; document.title = title; const h = $('#appTitle'); if (h) h.textContent = title;
+  const fp = $('#fPerson'); PEOPLE.forEach(p => fp.insertAdjacentHTML('beforeend', `<option value="${esc(p)}">${esc(p)}</option>`));
+  if (!PEOPLE.length){ fp.closest('.ctl').hidden = true; $('#pkWhoBox').hidden = true; }
+  $('#pkWhoSeg').innerHTML = `<button type="button" data-w="спільні">спільна</button>` + PEOPLE.map(p => `<button type="button" data-w="${esc(p)}">${esc(p)}</button>`).join('');
+  $('#pkSrc').innerHTML = (CFG.incomeSources || ['Зарплата','Інше']).map(x => `<option>${esc(x)}</option>`).join('');
+}
+let setupDraft = null;
+function renderSetup(){
+  if (!$('#setupCard')) return;
+  if (!setupDraft) setupDraft = {accounts: JSON.parse(JSON.stringify((PKCFG && PKCFG.accounts) || [])), rates: cfgRates()};
+  const curs = [...new Set([...(CFG.currencies || ['EUR','USD']), ...setupDraft.accounts.map(a => a.cur)])];
+  $('#setupHint').textContent = PKCFG ? '' : 'Перший запуск: додайте рахунки з поточними залишками і збережіть. Після цього запрацює «Кишенька».';
+  $('#setupInfo').textContent = PKCFG && PKCFG.startDate ? 'облік з ' + PKCFG.startDate.split('-').reverse().join('.') : '';
+  $('#setupAccts').innerHTML = setupDraft.accounts.map((a,i) => `<div class="row setup-row">
+      <input type="text" data-i="${i}" data-f="name" value="${esc(a.name)}" placeholder="Назва" aria-label="Назва рахунку">
+      <select data-i="${i}" data-f="cur" aria-label="Валюта">${curs.map(c => `<option${c===a.cur?' selected':''}>${c}</option>`).join('')}</select>
+      <input type="text" inputmode="decimal" data-i="${i}" data-f="start" value="${a.start ?? ''}" placeholder="0" aria-label="Залишок">
+      <button class="linkbtn" type="button" data-del="${i}" aria-label="Видалити рахунок">×</button></div>`).join('') || '<p class="note">Поки жодного рахунку.</p>';
+  $('#setupRateNote').textContent = `Скільки ${PIVOT} коштує 1 одиниця валюти. Оновлюйте раз на місяць або коли курс помітно зміниться.`;
+  $('#setupRates').innerHTML = curs.filter(c => c !== PIVOT).map(c => `<div class="row setup-row"><label style="min-width:4em">1 ${c} =</label>
+      <input type="text" inputmode="decimal" data-rate="${c}" value="${setupDraft.rates[c] ?? ''}" placeholder="курс"> <span class="muted">${PIVOT}</span></div>`).join('');
+}
+function wireSetup(){
+  const card = $('#setupCard'); if (!card) return;
+  card.addEventListener('input', e => { const t = e.target;
+    if (t.dataset.f){ const a = setupDraft.accounts[+t.dataset.i]; a[t.dataset.f] = t.dataset.f==='start' ? t.value : t.value; }
+    if (t.dataset.rate) setupDraft.rates[t.dataset.rate] = t.value; });
+  card.addEventListener('change', e => { if (e.target.dataset.f==='cur'){ setupDraft.accounts[+e.target.dataset.i].cur = e.target.value; renderSetup(); } });
+  card.addEventListener('click', e => { const d = e.target.closest('[data-del]'); if (d){ setupDraft.accounts.splice(+d.dataset.del, 1); renderSetup(); } });
+  $('#setupAddAcct').onclick = () => { setupDraft.accounts.push({name:'', cur:(CFG.currencies||['EUR'])[0], start:''}); renderSetup(); };
+  $('#setupSave').onclick = async () => {
+    const st = $('#setupStatus');
+    const accounts = setupDraft.accounts.filter(a => a.name.trim()).map(a => ({name:a.name.trim(), cur:a.cur, start: Math.round((parseFloat(String(a.start).replace(',','.'))||0)*100)/100}));
+    const names = accounts.map(a => a.name); if (new Set(names).size !== names.length){ st.textContent = 'Назви рахунків мають відрізнятися.'; return; }
+    const rates = {}; Object.entries(setupDraft.rates).forEach(([c,v]) => { const x = parseFloat(String(v).replace(',','.')); if (x > 0) rates[c] = x; }); rates[PIVOT] = 1;
+    const missing = [...new Set(accounts.map(a => a.cur).concat(['USD','EUR']))].filter(c => !rates[c]);
+    if (missing.length){ st.textContent = 'Потрібен курс для: ' + missing.join(', '); return; }
+    const t = todayISO();
+    const doc = {...(PKCFG || {}), accounts, rates, startDate: (PKCFG && PKCFG.startDate) || t, firstMonth: (PKCFG && PKCFG.firstMonth) || t.slice(0,7)};
+    try { await db.doc('pocket/config').set(doc); setupDraft = null; st.textContent = 'Збережено.'; } catch(err){ st.textContent = 'Не вдалося: ' + (err.message || err.code); }
+  };
+}
+
+/* ============ POCKET («Кишенька») ============ */
+let PK = [];            // operations entered in the pocket (db collection pocketTx)
+let PKCFG = null;       // {accounts:[{name,cur,start}], startDate, rates:{USD,EUR,...: UAH per unit}}
+const PK_FUND_DEFAULT = (CFG.categories||[]).filter(c => c.role==='fund').map(c => c.name);
+const PK_WANT_DEFAULT = (CFG.categories||[]).filter(c => c.role==='want').map(c => c.name);
+const PK_ALLOW_DEFAULT = CFG.allowances || {'спільні':150};   // USD per month
+const WHO = ['спільні', ...PEOPLE];
+const roleOf = g => (budget && budget.roles && budget.roles[g]) || (PK_FUND_DEFAULT.includes(g) ? 'fund' : PK_WANT_DEFAULT.includes(g) ? 'want' : 'regular');
+const allowOf = w => { const a = budget && budget.allowances; return (a && a[w]!=null) ? +a[w] : PK_ALLOW_DEFAULT[w]; };
+const dayOfISO = s => Math.round((Date.parse(s+'T00:00:00Z') - BASE)/DAY);
+const todayISO = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; };
+function pkRate(cur, day){        // base-currency units per unit; history rates while they last, then the pocket's snapshot
+  if (cur===PIVOT) return 1;
+  if (D && D.rates && D.rates[cur] && day!=null && day - R0 < D.rates.USD.length) return rateOn(day, cur);
+  const r = PKCFG && PKCFG.rates; if (r && r[cur]) return r[cur];
+  if (D && D.rates && D.rates[cur]) return D.rates[cur][D.rates[cur].length-1];
+  return null;
+}
+function pkConv(amount, cur, day, eurGiven){
+  const ru = pkRate('USD',day), re = pkRate('EUR',day), rc = pkRate(cur,day);
+  let usd = cur==='USD' ? amount : (rc&&ru ? amount*rc/ru : 0);
+  let eur = cur==='EUR' ? amount : eurGiven ? eurGiven : (rc&&re ? amount*rc/re : 0);
+  if (eurGiven && cur!=='USD' && re && ru) usd = cur==='USD' ? amount : usd;   // usd stays from the debited amount
+  return {usd:Math.round(usd*100)/100, eur:Math.round(eur*100)/100};
+}
+function pocketRows(){
+  return PK.filter(o => o.type==='exp' || o.type==='inc').map(o => {
+    const day = dayOfISO(o.date), v = pkConv(+o.amount, o.cur, day, o.type==='exp' ? +o.eur||0 : 0);
+    const who = o.who || 'спільні';
+    return {day, ym:ymOf(day), inc:o.type==='inc', name: o.type==='inc' ? (o.source||'Зарплата') : o.group, group: o.type==='inc' ? (o.source||'Зарплата') : o.group,
+      acct:o.account, amt:+o.amount, cur:o.cur, usd:v.usd, eur:v.eur, tags: [...(o.tags||[]), ...(who!=='спільні' ? [who] : [])], note:o.note||'', amt2: o.eur && o.cur!=='EUR' ? +o.eur : null, cur2: o.eur && o.cur!=='EUR' ? 'EUR' : null,
+      usdAsis:o.cur==='USD', eurAsis:o.cur==='EUR' || !!o.eur, who: who!=='спільні' ? who : null, oneoff:false, pocket:true, pkId:o.id};
+  });
+}
+function pkStartDay(){ return PKCFG && PKCFG.startDate ? dayOfISO(PKCFG.startDate) : dayOfISO(todayISO()); }
+function pkStartYM(){ // month the limits and funds start counting from
+  if (PKCFG && PKCFG.firstMonth){ const [y,m] = PKCFG.firstMonth.split('-').map(Number); return y*12+m-1; }
+  const d = new Date(BASE + (pkStartDay()+1)*DAY); return d.getUTCFullYear()*12 + d.getUTCMonth(); }
+function nowYM(){ const n = new Date(); return n.getFullYear()*12 + n.getMonth(); }
+function pkAccountBalances(){
+  const acc = (PKCFG && PKCFG.accounts) || [];
+  const bal = Object.fromEntries(acc.map(a => [a.name, +a.start||0]));
+  PK.forEach(o => {
+    const a = +o.amount||0;
+    if (o.type==='exp') bal[o.account] = (bal[o.account]||0) - a;
+    else if (o.type==='inc') bal[o.account] = (bal[o.account]||0) + a;
+    else if (o.type==='tr'){ bal[o.account] = (bal[o.account]||0) - a; bal[o.account2] = (bal[o.account2]||0) + (+o.amount2 || a); }
+    else if (o.type==='adj') bal[o.account] = (bal[o.account]||0) + a;
+  });
+  return acc.map(x => ({...x, bal: Math.round(bal[x.name]*100)/100}));
+}
+function pkToDisp(amount, cur){ const day = dayOfISO(todayISO()); const v = pkConv(amount, cur, day); return S.cur==='EUR' ? v.eur : v.usd; }
+function pkCushion(){ return pkAccountBalances().reduce((s,a)=>s+pkToDisp(a.bal, a.cur),0); }
+function pkWants(){
+  const k = budK(), sd = pkStartDay(), y0 = pkStartYM(), months = Math.max(0, nowYM() - y0 + 1);
+  const spentAll = {}, spentMonth = {}; WHO.forEach(w => { spentAll[w] = 0; spentMonth[w] = 0; });
+  TX.forEach(t => { if (t.inc || t.day <= sd || t.ym < y0 || roleOf(t.group)!=='want') return;
+    const w = t.who && WHO.includes(t.who) ? t.who : 'спільні'; spentAll[w] += V(t); if (t.ym===nowYM()) spentMonth[w] += V(t); });
+  return WHO.map(w => { const lim = allowOf(w)*k, avail = lim*months - spentAll[w];
+    return {w, lim, avail, months, carry: months ? avail - (lim - spentMonth[w]) : 0, spentMonth: spentMonth[w]}; });
+}
+let PKALLOC = {};   // 'YYYY-MM' -> {funds:{group:usd}, savings:usd, at}
+const ymKey = ym => Math.floor(ym/12) + '-' + String(ym%12+1).padStart(2,'0');
+function pkFunds(){
+  // a fund holds what was put aside with the monthly button, minus what was spent from its category since the start
+  const k = budK(), sd = pkStartDay(), G = budget && budget.groups ? budget.groups : {};
+  const groups = [...new Set([...Object.keys(G).filter(g => roleOf(g)==='fund' && +G[g] > 0), ...Object.values(PKALLOC).flatMap(a => Object.keys(a.funds||{}))])];
+  return groups.map(g => { let saved = 0, spent = 0;
+    Object.values(PKALLOC).forEach(a => saved += (+((a.funds||{})[g])||0)*k);
+    TX.forEach(t => { if (!t.inc && t.day > sd && t.group===g) spent += V(t); });
+    return {g, plan:(+G[g]||0)*k, saved, spent, bal: saved - spent}; }).sort((a,b)=>b.plan-a.plan);
+}
+const pkSavingsPut = () => Object.values(PKALLOC).reduce((s,a)=>s+(+a.savings||0),0)*budK();
+// cushion: free money for a rainy day. start (USD) is set once; every pocketFunds doc's `savings` adds to it
+// (monthly put-aside, month-end leftovers, corrections). Above the target, savings overflow into a goal fund.
+const cushCfg = () => (budget && budget.cushion) || null;
+const cushUSD = () => { const c = cushCfg(); return c ? (+c.start||0) + Object.values(PKALLOC).reduce((s,a)=>s+(+a.savings||0),0) : 0; };
+function cushSplit(usd){   // how much of a positive amount goes to the cushion vs the overflow goal
+  const c = cushCfg(); if (!c || !c.overflow || usd <= 0) return {cush: usd, over: 0};
+  const room = Math.max(0, (+c.target||0) - cushUSD()), cush = Math.min(usd, room);
+  return {cush: Math.round(cush*100)/100, over: Math.round((usd - cush)*100)/100};
+}
+function cushRow(){
+  const c = cushCfg(), k = budK();
+  if (!c) return `<div class="pk-li"><div class="nm">Подушка (заощадження)<small>відкладено кнопкою від початку «Кишеньки»</small></div><div class="fig">${fmt(pkSavingsPut())}<small>додалося</small></div></div>`;
+  const v = cushUSD()*k, t = (+c.target||0)*k, pct = t ? Math.min(100, v/t*100) : 0, full = v >= t - 0.5;
+  return `<div class="pk-li" data-fund="__cush"><div class="nm">Подушка<small>на чорний день · не чіпаємо</small></div>
+    <div class="fig" style="color:var(${full?'--ink':'--warn'})">${fmt(v)}<small><button class="linkbtn pk-ffix" type="button" data-g="__cush">виправити</button></small></div>
+    <div class="meter"><div class="fill" style="width:${pct}%"></div></div>
+    <small class="pk-goal">ціль ${fmt(t)} — 6 місяців обов’язкових витрат · ${full ? 'зібрано, заощадження й залишки йдуть у «' + esc(c.overflow) + '»' : 'бракує ' + fmt(t - v) + ', заощадження й залишки спершу йдуть сюди'}</small></div>`;
+}
+// what was left unassigned in a closed month: unplanned part of income + unspent (net) regular budget.
+// wants roll over on their own, funds keep their own balance.
+function pkLeftoverUSD(ym){
+  const G = budget && budget.groups ? budget.groups : {}, k = budK(), sp = spentIn(ym);
+  const planned = Object.values(G).reduce((s,v)=>s+(+v||0),0) + (+(budget && budget.savings)||0);
+  let r = (+(budget && budget.income)||0) - planned;
+  [...new Set([...Object.keys(G), ...Object.keys(sp)])].filter(g => roleOf(g)==='regular').forEach(g => r += (+G[g]||0) - (sp[g]||0)/k);
+  return Math.round(r*100)/100;
+}
+function pkPendingClose(){
+  if (!cushCfg()) return null;
+  for (let ym = pkStartYM(); ym < nowYM(); ym++) if (!PKALLOC['close-' + ymKey(ym)]) return ym;
+  return null;
+}
+function pkPlanAlloc(){
+  const G = budget && budget.groups ? budget.groups : {};
+  const funds = Object.fromEntries(Object.entries(G).filter(([g,v]) => roleOf(g)==='fund' && +v>0).map(([g,v]) => [g, +v]));
+  const sp = cushSplit(+(budget && budget.savings) || 0), c = cushCfg();
+  if (sp.over > 0) funds[c.overflow] = (funds[c.overflow]||0) + sp.over;
+  return {funds, savings: sp.cush};
+}
+async function pkAllocate(ym){
+  const plan = pkPlanAlloc();
+  try { await db.doc('pocketFunds/' + ymKey(ym)).set({...plan, at:new Date().toISOString()}); }
+  catch(e){ showErr(e.message || e.code); }
+}
+let pkAllocEdit = false;
+function renderClose(){
+  const box = $('#pkCloseCard'), ym = pkPendingClose();
+  if (ym == null){ box.hidden = true; box.innerHTML = ''; return; }
+  const k = budK(), c = cushCfg(), left = pkLeftoverUSD(ym), mon = MONTHS_FULL[ym%12];
+  box.hidden = false;
+  if (left < 0){
+    box.innerHTML = `<div class="row"><h2>Підсумок: ${mon}</h2></div><p class="note">Звичайні витрати вийшли за бюджет на <b>${fmt(-left*k)}</b> (з урахуванням незапланованої частини доходу). Ці гроші взято з подушки.</p>
+      <div class="row"><button class="btn primary" id="pkCloseBtn" type="button">Списати з подушки ${fmt(-left*k)}</button><button class="btn" id="pkCloseSkip" type="button">Не списувати</button></div>`;
+  } else {
+    const sp = cushSplit(left);
+    box.innerHTML = `<div class="row"><h2>Залишок: ${mon}</h2><span class="note">суми можна виправити</span></div>
+      <p class="note">Не витрачено зі звичайних витрат і не розподілено з доходу: <b>${fmt(left*k)}</b>.</p>
+      <ul><li><label for="cl-c">У подушку</label><input type="text" min="0" step="5" inputmode="decimal" id="cl-c" value="${Math.round(sp.cush*k)}"></li>
+      ${c.overflow ? `<li><label for="cl-o">${esc(c.overflow)}</label><input type="text" min="0" step="5" inputmode="decimal" id="cl-o" value="${Math.round(sp.over*k)}"></li>` : ''}</ul>
+      <div class="row"><button class="btn primary" id="pkCloseBtn" type="button">Перенести</button><button class="btn" id="pkCloseSkip" type="button">Пропустити</button></div>`;
+  }
+  const save = async (cushUsd, overUsd) => { const doc = {funds:{}, savings: Math.round(cushUsd*100)/100, at:new Date().toISOString(), note:'залишок місяця'};
+    if (overUsd > 0 && c.overflow) doc.funds[c.overflow] = Math.round(overUsd*100)/100;
+    try { await db.doc('pocketFunds/close-' + ymKey(ym)).set(doc); } catch(e){ showErr(e.message||e.code); } };
+  $('#pkCloseBtn').onclick = () => left < 0 ? save(left, 0) : save((+$('#cl-c').value||0)/k, $('#cl-o') ? (+$('#cl-o').value||0)/k : 0);
+  $('#pkCloseSkip').onclick = () => save(0, 0);
+}
+function renderAlloc(){
+  renderClose();
+  const ym = nowYM(), key = ymKey(ym), done = PKALLOC[key], k = budK(), plan = pkPlanAlloc(), month = MONTHS_FULL[ym%12];
+  const el = $('#pkAllocCard');
+  const src = done ? {funds: done.funds||{}, savings: +done.savings||0} : plan;
+  const groups = [...new Set([...Object.keys(plan.funds), ...Object.keys(src.funds)])].sort((a,b)=>(plan.funds[b]||src.funds[b]||0)-(plan.funds[a]||src.funds[a]||0));
+  const total = Object.values(src.funds).reduce((s,v)=>s+(+v||0),0)*k + src.savings*k;
+  if (done && !pkAllocEdit){
+    el.innerHTML = `<div class="row"><h2>Відкладено на ${month}</h2><span class="pill good">готово</span></div>
+      <p class="note">${fmt(total - src.savings*k)} розкладено по фондах${src.savings ? ' і ' + fmt(src.savings*k) + ' — у подушку' : ''}. <button class="linkbtn" id="pkAllocChange" type="button">змінити суми</button> · <button class="linkbtn" id="pkUndo" type="button">скасувати</button></p>`;
+    $('#pkAllocChange').onclick = () => { pkAllocEdit = true; renderAlloc(); };
+    $('#pkUndo').onclick = async e => { const b = e.target; if (!b.dataset.armed){ b.dataset.armed = 1; b.textContent = 'точно скасувати?'; setTimeout(()=>{ delete b.dataset.armed; b.textContent='скасувати'; }, 4000); return; }
+      try { await db.doc('pocketFunds/' + key).delete(); } catch(err){ showErr(err.message||err.code); } };
+    return;
+  }
+  el.innerHTML = `<div class="row"><h2>${done ? 'Змінити відкладене на' : 'Відкласти на'} ${month}</h2><span class="note">суми можна виправити</span></div>
+    <ul>${groups.map((g,i) => `<li><label for="al-${i}">${esc(g)}</label><input type="text" min="0" step="5" inputmode="decimal" id="al-${i}" data-g="${esc(g)}" value="${Math.round((+src.funds[g]||0)*k)}"></li>`).join('')}
+    <li><label for="al-sav">Подушка</label><input type="text" min="0" step="5" inputmode="decimal" id="al-sav" value="${Math.round(src.savings*k)}"></li></ul>
+    <div class="row"><button class="btn primary" id="pkAllocBtn" type="button">${done ? 'Зберегти' : 'Розкласти'} <span id="pkAllocSum">${fmt(total)}</span></button>${done ? '<button class="btn" id="pkAllocCancel" type="button">Скасувати</button>' : ''}</div>
+    <p class="note">Гроші лишаються на картках — «Кишенька» позначає їх як зайняті. Типово суми з бюджету.</p>`;
+  const sum = () => [...el.querySelectorAll('input')].reduce((s,i)=>s+(+i.value||0),0);
+  el.querySelectorAll('input').forEach(i => i.oninput = () => { $('#pkAllocSum').textContent = fmt(sum()); });
+  $('#pkAllocBtn').onclick = async () => {
+    const funds = {}; el.querySelectorAll('input[data-g]').forEach(i => { const v = (+i.value||0)/k; if (v > 0) funds[i.dataset.g] = Math.round(v*100)/100; });
+    const doc = {funds, savings: Math.round((+$('#al-sav').value||0)/k*100)/100, at:new Date().toISOString()};
+    try { await db.doc('pocketFunds/' + key).set(doc); pkAllocEdit = false; } catch(e){ showErr(e.message || e.code); }
+  };
+  if (done) $('#pkAllocCancel').onclick = () => { pkAllocEdit = false; renderAlloc(); };
+}
+async function pkFixFund(g){
+  const f = g==='__cush' ? {g, bal: cushUSD()*budK()} : pkFunds().find(x => x.g===g); if (!f) return;
+  const row = $('#pkFunds').querySelector(`.pk-li[data-fund="${CSS.escape(g)}"] .fig small`);
+  row.innerHTML = `<input type="text" step="1" inputmode="decimal" style="width:6.5em;text-align:right" value="${Math.round(f.bal)}" aria-label="Скільки зараз у фонді"> <button class="linkbtn" type="button">ок</button>`;
+  const inp = row.querySelector('input'); inp.focus(); inp.select();
+  const go = async () => { const v = +inp.value; if (isNaN(v) || Math.abs(v - f.bal) < 0.5){ render(); return; }
+    const deltaUSD = Math.round((v - f.bal)/budK()*100)/100;
+    const doc = g==='__cush' ? {funds:{}, savings: deltaUSD, note:'виправлення подушки'} : {funds:{[g]: deltaUSD}, savings:0, note:'виправлення фонду'};
+    try { await db.doc('pocketFunds/adj-' + Date.now()).set({...doc, at:new Date().toISOString()}); } catch(e){ showErr(e.message||e.code); } };
+  row.querySelector('button').onclick = go; inp.addEventListener('keydown', e => { if (e.key==='Enter') go(); if (e.key==='Escape') render(); });
+}
+function renderPocket(){
+  if (!db){ $('#pkOff').hidden = false; $('#pkMain').hidden = true;
+    $('#pkOff').innerHTML = '<h2>«Кишенька» недоступна</h2><p>Для спільних даних на двох потрібен вхід у claude.ai і доступ до цієї сторінки з правом редагування. Відкрийте сторінку зі свого акаунта.</p>'; return; }
+  $('#pkOff').hidden = true; $('#pkMain').hidden = false;
+  if (!PKCFG){ $('#pkWants').innerHTML = '<p class="note">Завантажую «Кишеньку»…</p>'; return; }
+  const now = new Date(), dim = new Date(now.getFullYear(), now.getMonth()+1, 0).getDate(), daysLeft = dim - now.getDate() + 1, weeksLeft = Math.max(1, daysLeft/7), paceNow = now.getDate()/dim;
+  // wants
+  const W = pkWants();
+  const card = (x, v, l1, l2, neg) => `<button type="button" class="pk-w" data-w="${x.w}" aria-label="Витратити із забаганок: ${x.w}"><span class="who">${x.w==='спільні'?'Спільні':x.w}</span><span class="v ${neg?'neg':''}">${v}</span><small>${l1}</small><small>${l2}</small><span class="tap">+ витратити</span></button>`;
+  $('#pkWants').innerHTML = W.map(x => x.months===0
+    ? card(x, fmt(x.lim), 'з ' + MONTHS_GEN[pkStartYM()%12], 'ліміт на місяць', false)
+    : card(x, fmt(x.avail), x.avail>0 ? '≈ '+fmt(x.avail/weeksLeft)+' на тиждень' : 'ліміт вичерпано', `ліміт ${fmt(x.lim)}/міс${Math.abs(x.carry)>=1 ? ` · ${x.carry>0?'+':'−'}${fmt(Math.abs(x.carry))} з минулих міс.` : ''}`, x.avail<0)).join('');
+  $('#pkWants').querySelectorAll('.pk-w').forEach(b => b.onclick = () => pkOpen('exp', {who:b.dataset.w, want:true}));
+  const notYet = W[0] && W[0].months===0;
+  $('#pkWantsNote').textContent = notYet ? `Ліміти забаганок і фонди почнуть накопичуватися з ${ymLong(pkStartYM())}. Витрати можна вносити вже зараз.` : `Забаганки — це ${PK_WANT_DEFAULT.filter(g=>roleOf(g)==='want').join(', ').toLowerCase()}. Натисніть на картку, щоб внести витрату з цього ліміту. Невитрачене переноситься на наступний місяць. До кінця місяця ${daysLeft} дн.`;
+  // month: every category with its budget; ‹ › walk through past months to compare
+  renderPkMonth(paceNow);
+  // monthly put-aside, funds
+  renderAlloc();
+  const F = pkFunds(), fTot = F.reduce((s,f)=>s+f.bal,0), savPut = pkSavingsPut();
+  $('#pkFundsTotal').textContent = `у фондах ${fmt(fTot)}`;
+  $('#pkFunds').innerHTML = F.map(f => { const gi = goalInfo(f.g, f.bal);
+    const moves = `відкладено ${fmt(f.saved)}${f.spent>0.5?` · витрачено ${fmt(f.spent)}`:''}`;
+    if (!gi) return `<div class="pk-li" data-fund="${esc(f.g)}"><div class="nm">${esc(f.g)}<small>${moves}</small></div>
+      <div class="fig" style="color:var(${f.bal<0?'--warn':'--ink'})">${fmt(f.bal)}<small><button class="linkbtn pk-ffix" type="button" data-g="${esc(f.g)}">виправити</button></small></div></div>`;
+    const short = Math.max(0, gi.target - f.bal), done = short < 0.5;
+    const late = gi.need != null && f.plan > 0 && gi.need > f.plan*1.05;
+    const pace = done ? 'ціль зібрано' : gi.need == null ? `бракує ${fmt(short)}` :
+      `бракує ${fmt(short)} · відкладати ~${fmt(gi.need)}/міс <span style="color:var(${late?'--warn':'--muted'})">(у бюджеті ${fmt(f.plan)}${late?' — не встигаєте':''})</span>`;
+    return `<div class="pk-li" data-fund="${esc(f.g)}"><div class="nm">${esc(f.g)}<small>${esc(gi.what || 'ціль')}: ${fmt(gi.target)}${gi.by ? ' до ' + esc(gi.by) : ''}</small></div>
+      <div class="fig" style="color:var(${f.bal<0?'--warn':'--ink'})">${fmt(f.bal)}<small>є зараз</small></div>
+      <div class="meter"><div class="fill ${late?'warn':''}" style="width:${gi.pct}%"></div></div>
+      <small class="pk-goal">${fmtN(gi.pct,0)}% · ${pace}<br>${moves} · <button class="linkbtn pk-ffix" type="button" data-g="${esc(f.g)}">виправити</button></small></div>`; }).join('') + cushRow();
+  // accounts
+  const A = pkAccountBalances(), aTot = A.reduce((s,a)=>s+pkToDisp(a.bal,a.cur),0);
+  $('#pkAcctTotal').textContent = `усього ${fmt(aTot)} · у фондах ${fmt(Math.max(0,fTot))}${cushCfg() ? ' · у подушці ' + fmt(cushUSD()*budK()) : ''}`;
+  $('#pkAccts').innerHTML = A.filter(a => Math.abs(a.bal) >= 0.5 || a.keep).map(a => `<div class="pk-li" data-acc="${esc(a.name)}"><div class="nm">${esc(a.name)}<small>${a.cur}</small></div>
+    <div class="fig">${fmtN(a.bal,2)} ${a.cur}<small><button class="linkbtn pk-fix" type="button" data-acc="${esc(a.name)}">виправити залишок</button></small></div></div>`).join('');
+  $('#pkAccts').querySelectorAll('.pk-fix').forEach(b => b.onclick = () => pkFixBalance(b.dataset.acc));
+  $('#pkFunds').querySelectorAll('.pk-ffix').forEach(b => b.onclick = () => pkFixFund(b.dataset.g));
+  // recent
+  const R = PK.slice().sort((a,b)=> (b.date||'').localeCompare(a.date||'') || (b.createdAt||'').localeCompare(a.createdAt||'')).slice(0,30);
+  $('#pkRecent').innerHTML = R.map(o => { const sign = o.type==='inc' || (o.type==='adj' && +o.amount>0) ? '+' : o.type==='tr' ? '' : '−';
+    const title = o.type==='exp' ? o.group : o.type==='inc' ? (o.source||'Дохід') : o.type==='tr' ? `${o.account} → ${o.account2}` : 'Виправлення залишку';
+    const sub = [o.date.split('-').reverse().join('.'), o.type==='tr'||o.type==='adj' ? '' : o.account, o.type==='exp' && o.who && o.who!=='спільні' ? o.who : '', o.note].filter(Boolean).join(' · ');
+    return `<div class="pk-li"><div class="nm">${esc(title)}<small>${esc(sub)}</small></div><div class="fig">${sign}${fmtN(Math.abs(+o.amount),2)} ${o.cur}
+      <small class="acts"><button class="linkbtn pk-del" type="button" data-id="${o.id}">видалити</button></small></div></div>`; }).join('') || '<p class="note">Тут з’являться операції, які ви внесете в «Кишеньку».</p>';
+  $('#pkRecent').querySelectorAll('.pk-del').forEach(b => b.onclick = async () => {
+    if (b.dataset.armed){ try { await db.doc('pocketTx/'+b.dataset.id).delete(); } catch(e){ showErr(e.message||e.code); } }
+    else { b.dataset.armed = '1'; b.textContent = 'точно видалити?'; b.style.color = 'var(--crit)'; setTimeout(()=>{ delete b.dataset.armed; b.textContent='видалити'; b.style.color=''; }, 4000); } });
+}
+async function pkFixBalance(name){
+  const a = pkAccountBalances().find(x => x.name===name); if (!a) return;
+  const row = $('#pkAccts').querySelector(`.pk-li[data-acc="${CSS.escape(name)}"] .fig small`);
+  row.innerHTML = `<input type="text" step="0.01" inputmode="decimal" style="width:7em;text-align:right" value="${a.bal}" aria-label="Фактичний залишок"> <button class="linkbtn" type="button">ок</button>`;
+  const inp = row.querySelector('input'); inp.focus(); inp.select();
+  const go = async () => { const v = +inp.value; if (isNaN(v) || Math.abs(v - a.bal) < 0.005){ renderPocket(); return; }
+    try { await db.collection('pocketTx').add({type:'adj', date:todayISO(), amount:Math.round((v-a.bal)*100)/100, account:name, cur:a.cur, note:'фактичний залишок '+v, createdAt:new Date().toISOString()}); } catch(e){ showErr(e.message||e.code); } };
+  row.querySelector('button').onclick = go; inp.addEventListener('keydown', e => { if (e.key==='Enter') go(); if (e.key==='Escape') renderPocket(); });
+}
+let pkMonthYM = null;   // null = current month
+function renderPkMonth(paceNow){
+  const cur = nowYM(), ym = pkMonthYM ?? cur, spent = spentIn(ym), kB = budK(), G = budget && budget.groups ? budget.groups : {};
+  const pace = ym < cur ? 1 : paceNow;
+  const nonFund = g => roleOf(g)!=='fund';
+  const totB = Object.entries(G).filter(([g])=>nonFund(g)).reduce((s,[,v])=>s+(+v||0)*kB,0);
+  const totS = Object.entries(spent).filter(([g])=>nonFund(g)).reduce((s,[,v])=>s+v,0);
+  const avg = avgL12ByGroup();
+  $('#pkMonthTitle').textContent = ymLong(ym)[0].toUpperCase() + ymLong(ym).slice(1);
+  $('#pkMonthNote').textContent = `${ym===cur?'витрачено':'було'} ${fmt(totS)} з ${fmt(totB)} без фондів`;
+  $('#pkNext').disabled = ym >= cur; $('#pkPrev').disabled = ym <= MIN_YM;
+  const order = { regular:0, want:1, fund:2 };
+  const groups = [...new Set([...Object.keys(G).filter(g => +G[g] > 0), ...Object.keys(spent).filter(g => spent[g] > 0.5)])]
+    .filter(g => roleOf(g) !== 'fund')   // funds live in their own list below — one row each
+    .sort((a,b) => order[roleOf(a)] - order[roleOf(b)] || (+G[b]||0) - (+G[a]||0));
+  // real payments from funds this month (not the smoothed share of an earlier tax payment)
+  const fundSpent = TX.filter(t => !t.inc && t.ym===ym && roleOf(t.group)==='fund' && t.day > pkStartDay()).reduce((s,t) => s+V(t), 0);
+  let lastRole = null, h = '';
+  groups.forEach(g => {
+    const role = roleOf(g);
+    if (role !== lastRole){ h += `<div class="pk-sec">${role==='regular'?'Звичайні витрати':role==='want'?'Забаганки':'З фондів'}</div>`; lastRole = role; }
+    const b = role==='fund' ? 0 : (+G[g]||0)*kB, sp = spent[g]||0, r = b - sp, w = b ? Math.min(100, sp/b*100) : 0;
+    const sev = overSev(sp, b, totS <= totB);
+    const right = role==='fund' ? fmt(sp) : b ? (r>=0 ? (ym===cur?'лишилося ':'не витрачено ')+fmt(r) : 'понад '+fmt(-r)) : fmt(sp);
+    const sub = role==='fund' ? 'з фонду' : `${fmt(sp)} з ${b?fmt(b):'—'}${ym!==cur && avg[g] ? ` · зазвичай ${fmt(avg[g])}` : ''}`;
+    h += `<div class="pk-li"><div class="nm">${esc(g)}</div><div class="fig" style="color:var(${sevColor(sev)})">${right}<small>${sub}</small></div>
+      ${role==='fund' ? '' : `<div class="meter"><div class="fill ${sev || (b && sp > b*pace*1.1 && pace<1 ? 'soft' : '')}" style="width:${w}%"></div></div>`}</div>`;
+  });
+  if (fundSpent > 0.5) h += `<p class="note" style="margin:10px 0 0">Ще ${fmt(fundSpent)} витрачено з фондів — по кожному фонду дивіться у «Фондах».</p>`;
+  $('#pkMonth').innerHTML = h || '<p class="note">Цього місяця операцій немає.</p>';
+}
+
+/* ---- entry form ---- */
+let pkType = 'exp', pkCat = null, pkWho = lsGet('pkWho') || 'спільні', pkTagSel = new Set();
+function pkCatStats(){
+  const cnt = {}; TX.filter(t => !t.inc && t.ym > MAX_YM-6 && t.ym <= MAX_YM).forEach(t => cnt[t.group] = (cnt[t.group]||0)+1);
+  return cnt;
+}
+function pkCategories(){
+  const G = budget && budget.groups ? [...Object.keys(budget.groups), ...Object.keys(budget.goals||{})] : [];
+  const cnt = pkCatStats();
+  return [...new Set([...G, ...Object.keys(cnt)])].filter(g => g !== 'Нерухомість' || G.includes(g)).sort((a,b)=>(cnt[b]||0)-(cnt[a]||0));
+}
+const PK_NO_BUTTON = CFG.noQuickButton || [];   // cutting back: reachable from the full list only
+const pkFrequent = () => { const cnt = pkCatStats(), ok = g => roleOf(g)!=='fund' && !PK_NO_BUTTON.includes(g);
+  const f = pkCategories().filter(g => (cnt[g]||0) >= 30 && ok(g));
+  if (f.length >= 4) return f;
+  // little history yet: the biggest everyday categories from the budget
+  const G = (budget && budget.groups) || {};
+  return [...new Set([...f, ...pkCategories().filter(ok).sort((a,b) => (cnt[b]||0) - (cnt[a]||0) || (+G[b]||0) - (+G[a]||0))])].slice(0, 6); };  // 5+ times a month over the last 6 months
+function pkTagsFor(g){
+  const cnt = {};
+  TX.filter(t => !t.inc && t.group===g && t.ym > MAX_YM-12).forEach(t => t.tags.forEach(x => { if (!PEOPLE.includes(x)) cnt[x] = (cnt[x]||0)+1; }));
+  return Object.entries(cnt).sort((a,b)=>b[1]-a[1]).slice(0,10).map(x=>x[0]);
+}
+function pkAllTags(){   // every tag ever used (CoinKeeper history + «Кишенька»), most used in the last 2 years first
+  const cnt = {}; TX.forEach(t => t.tags.forEach(x => { if (!PEOPLE.includes(x)) cnt[x] = (cnt[x]||0) + (t.ym > MAX_YM-24 ? 10 : 1); }));
+  return Object.keys(cnt).sort((a,b)=>cnt[b]-cnt[a]);
+}
+function pkTagDropdown(){
+  const inp = $('#pkTagNew'), dd = $('#pkTagDD'); if (!inp) return;
+  const q = inp.value.trim().toLowerCase();
+  if (!q){ dd.hidden = true; return; }
+  const all = pkAllTags(), hits = all.filter(t => t.toLowerCase().includes(q) && !pkTagSel.has(t)).slice(0, 8);
+  const exact = all.some(t => t.toLowerCase()===q) || [...pkTagSel].some(t => t.toLowerCase()===q);
+  dd.innerHTML = hits.map(t => `<button type="button" data-pick="${esc(t)}">${esc(t)}</button>`).join('') +
+    (exact ? '' : `<button type="button" class="new" data-pick="${esc(inp.value.trim())}">+ додати «${esc(inp.value.trim())}»</button>`);
+  dd.hidden = !dd.innerHTML;
+}
+function pkPickTag(t){ if (!t) return; pkTagSel.add(t); pkRenderTags(); pkSync(); const i = $('#pkTagNew'); if (i) i.focus(); }
+function pkRenderTags(){
+  const tags = [...new Set([...pkTagsFor(pkCat), ...pkTagSel])];
+  $('#pkTags').innerHTML = tags.map(t => `<button type="button" data-tag="${esc(t)}" aria-pressed="${pkTagSel.has(t)}">${esc(t)}</button>`).join('') +
+    `<div class="pk-tagsearch"><input type="text" id="pkTagNew" placeholder="знайти або додати мітку" maxlength="30" autocomplete="off" aria-label="Знайти або додати мітку"><div class="pk-dd" id="pkTagDD" hidden></div></div>`;
+}
+function pkOpen(type, opts={}){
+  pkType = type; const f = $('#pkForm'); f.reset(); $('#pkFormMsg').textContent = ''; pkTagSel = new Set();
+  const accs = ((PKCFG && PKCFG.accounts) || []).map(a => a.name);
+  const lastAcc = lsGet('pkAcct'); const opt = accs.map(a => `<option ${a===lastAcc?'selected':''}>${esc(a)}</option>`).join('');
+  $('#pkAcct').innerHTML = opt; $('#pkAcct2').innerHTML = accs.map(a => `<option>${esc(a)}</option>`).join('');
+  const cats = pkCategories(), freq = pkFrequent();
+  if (opts.who) pkWho = opts.who;
+  if (opts.want){ const wantCats = cats.filter(g => roleOf(g)==='want' && !PK_NO_BUTTON.includes(g)); if (!wantCats.includes(pkCat)) pkCat = wantCats[0]; }
+  if (!pkCat || !cats.includes(pkCat)) pkCat = freq[0] || cats[0];
+  const btnCats = opts.want ? cats.filter(g => roleOf(g)==='want' && !PK_NO_BUTTON.includes(g)) : freq;
+  $('#pkCats').innerHTML = btnCats.map(g => `<button type="button" data-g="${esc(g)}" aria-pressed="${g===pkCat}">${esc(g)}</button>`).join('');
+  $('#pkCatAll').innerHTML = '<option value="" disabled>усі категорії…</option>' + cats.map(g => `<option ${g===pkCat?'selected':''}>${esc(g)}</option>`).join('');
+  $('#pkDate').value = todayISO();
+  pkRenderTags(); pkSync(); $('#pkSheet').hidden = false; setTimeout(()=>$('#pkAmt').focus(), 50);
+}
+function pkSync(){
+  const f = $('#pkForm');
+  f.querySelectorAll('.pk-form-head .seg button').forEach(b => b.setAttribute('aria-pressed', b.dataset.t===pkType));
+  f.querySelectorAll('[data-for]').forEach(el => el.hidden = !el.dataset.for.split(' ').includes(pkType));
+  f.querySelectorAll('.pk-who button').forEach(b => b.setAttribute('aria-pressed', b.dataset.w===pkWho));
+  f.querySelectorAll('#pkCats button').forEach(b => b.setAttribute('aria-pressed', b.dataset.g===pkCat));
+  f.querySelectorAll('#pkTags button').forEach(b => b.setAttribute('aria-pressed', pkTagSel.has(b.dataset.tag)));
+  const cur = n => (((PKCFG && PKCFG.accounts) || []).find(a => a.name===n) || {}).cur || '';
+  const c1 = cur($('#pkAcct').value), c2 = cur($('#pkAcct2').value);
+  $('#pkAmtCur').textContent = c1; $('#pkAmt2Cur').textContent = c2;
+  $('#pkAmt2Row').hidden = pkType!=='tr' || c1===c2;
+  $('#pkEurRow').hidden = pkType!=='exp' || c1==='EUR';
+  $('#pkAcctLabel').textContent = pkType==='tr' ? 'Звідки' : pkType==='inc' ? 'На рахунок' : 'Рахунок';
+  $('#pkSave').textContent = pkType==='exp' ? 'Зберегти витрату' : pkType==='inc' ? 'Зберегти дохід' : 'Зберегти переказ';
+  // what this purchase does to the wants limit
+  const hint = $('#pkWantHint');
+  if (pkType==='exp' && roleOf(pkCat)==='want'){
+    const w = pkWants().find(x => x.w===pkWho), amt = +$('#pkAmt').value || 0;
+    const v = amt ? pkConv(amt, c1, dayOfISO(todayISO()), +$('#pkEur').value||0) : null, spend = v ? (S.cur==='EUR'?v.eur:v.usd) : 0;
+    const who = pkWho==='спільні' ? 'спільних забаганок' : 'забаганок ' + ((CFG.peopleGenitive||{})[pkWho] || pkWho);
+    hint.hidden = false;
+    hint.innerHTML = w && w.months>0 ? `Це забаганка: спишеться з ${who}. Зараз там ${fmt(w.avail)}${amt ? `, після покупки залишиться <b>${fmt(w.avail - spend)}</b>` : ''}.`
+                                     : `Це забаганка: спишеться з ${who}, коли ліміти почнуть діяти.`;
+  } else if (pkType==='exp' && roleOf(pkCat)==='fund'){
+    const f = pkFunds().find(x => x.g===pkCat); hint.hidden = false;
+    hint.textContent = `Це витрата з фонду «${pkCat}»${f ? `, у ньому зараз ${fmt(f.bal)}` : ''}. Забаганки не зменшаться.`;
+  } else hint.hidden = true;
+}
+async function pkSave(e){
+  e.preventDefault();
+  const amt = +$('#pkAmt').value; if (!(amt > 0)){ $('#pkFormMsg').textContent = 'Введіть суму більшу за нуль.'; return; }
+  const acc = $('#pkAcct').value, a = ((PKCFG && PKCFG.accounts) || []).find(x => x.name===acc); if (!a){ $('#pkFormMsg').textContent = 'Виберіть рахунок.'; return; }
+  const doc = {type:pkType, date:$('#pkDate').value || todayISO(), amount:Math.round(amt*100)/100, account:acc, cur:a.cur, note:$('#pkNote').value.trim(), createdAt:new Date().toISOString()};
+  if (pkType==='exp'){ doc.group = pkCat; doc.who = pkWho; doc.tags = [...pkTagSel]; const eu = +$('#pkEur').value; if (eu > 0 && a.cur!=='EUR') doc.eur = Math.round(eu*100)/100; }
+  if (pkType==='inc') doc.source = $('#pkSrc').value;
+  if (pkType==='tr'){ const b = ((PKCFG && PKCFG.accounts) || []).find(x => x.name===$('#pkAcct2').value); if (!b || b.name===acc){ $('#pkFormMsg').textContent = 'Виберіть інший рахунок, куди переказуєте.'; return; }
+    doc.account2 = b.name; doc.cur2 = b.cur; doc.amount2 = b.cur===a.cur ? doc.amount : (+$('#pkAmt2').value || 0);
+    if (b.cur!==a.cur && !(doc.amount2 > 0)){ $('#pkFormMsg').textContent = `Скільки надійшло на «${b.name}» в ${b.cur}?`; return; } }
+  $('#pkSave').disabled = true;
+  try { await db.collection('pocketTx').add(doc); lsSet('pkAcct', acc); lsSet('pkWho', pkWho); $('#pkSheet').hidden = true; }
+  catch(err){ $('#pkFormMsg').textContent = 'Не вдалося зберегти: ' + (err.code==='permission_denied' || err.code==='not_granted' ? 'потрібен доступ до сторінки з правом редагування' : (err.message||err.code)); }
+  $('#pkSave').disabled = false;
+}
+function wirePocket(){
+  $('#pkPrev').onclick = () => { pkMonthYM = (pkMonthYM ?? nowYM()) - 1; render(); };
+  $('#pkNext').onclick = () => { pkMonthYM = Math.min(nowYM(), (pkMonthYM ?? nowYM()) + 1); if (pkMonthYM===nowYM()) pkMonthYM = null; render(); };
+  $('#pkAdd').onclick = () => pkOpen('exp'); $('#pkAddInc').onclick = () => pkOpen('inc'); $('#pkAddTr').onclick = () => pkOpen('tr');
+  $('#pkClose').onclick = () => { $('#pkSheet').hidden = true; };
+  $('#pkSheet').addEventListener('click', e => { if (e.target.id==='pkSheet') $('#pkSheet').hidden = true; });
+  $('#pkForm').querySelectorAll('.pk-form-head .seg button').forEach(b => b.onclick = () => { pkType = b.dataset.t; pkSync(); });
+  $('#pkForm').querySelectorAll('.pk-who button').forEach(b => b.onclick = () => { pkWho = b.dataset.w; pkSync(); });
+  $('#pkCats').addEventListener('click', e => { const b = e.target.closest('button[data-g]'); if (b){ pkCat = b.dataset.g; $('#pkCatAll').value = pkCat; pkTagSel = new Set(); pkRenderTags(); pkSync(); } });
+  $('#pkCatAll').onchange = e => { pkCat = e.target.value; pkTagSel = new Set(); pkRenderTags(); pkSync(); };
+  $('#pkTags').addEventListener('click', e => { const pick = e.target.closest('button[data-pick]'); if (pick){ pkPickTag(pick.dataset.pick); return; }
+    const b = e.target.closest('button[data-tag]'); if (b){ const t = b.dataset.tag; pkTagSel.has(t) ? pkTagSel.delete(t) : pkTagSel.add(t); pkSync(); } });
+  $('#pkTags').addEventListener('input', e => { if (e.target.id==='pkTagNew') pkTagDropdown(); });
+  $('#pkTags').addEventListener('keydown', e => { if (e.target.id==='pkTagNew' && e.key==='Enter'){ e.preventDefault();
+    const first = $('#pkTagDD') && !$('#pkTagDD').hidden ? $('#pkTagDD').querySelector('button') : null; pkPickTag(first ? first.dataset.pick : e.target.value.trim()); }
+    if (e.target.id==='pkTagNew' && e.key==='Escape'){ e.stopPropagation(); $('#pkTagDD').hidden = true; } });
+  $('#pkAmt').addEventListener('input', pkSync); $('#pkEur').addEventListener('input', pkSync);
+  $('#pkAcct').onchange = pkSync; $('#pkAcct2').onchange = pkSync;
+  $('#pkForm').addEventListener('submit', pkSave);
+  document.addEventListener('keydown', e => { if (e.key==='Escape' && !$('#pkSheet').hidden) $('#pkSheet').hidden = true; });
+}
+
+/* ============ routing & wiring ============ */
+const TABS = ['pocket','overview','budget','spending','ops','advice','data'];
+function currentTab(){ const h = location.hash.slice(1); return TABS.includes(h) ? h : (window.innerWidth < 640 ? 'pocket' : 'overview'); }
+function render(){ try { renderInner(); } catch(e){ console.error(e); showErr(e.message||String(e)); } }
+function renderInner(){
+  const tab = currentTab();
+  if (!D && tab!=='pocket' && tab!=='data') return;
+  if (!D){ TABS.forEach(t => { $('#p-'+t).hidden = t!==tab; }); $('#loading').hidden = true; if (tab==='pocket') renderPocket(); return; }
+  TABS.forEach(t => { $('#p-'+t).hidden = t!==tab; });
+  document.querySelectorAll('nav.tabs a').forEach(a => { if (a.getAttribute('href')==='#'+tab) a.setAttribute('aria-current','page'); else a.removeAttribute('aria-current'); });
+  const hideF = tab==='budget'||tab==='advice'||tab==='data'||tab==='pocket';
+  $('#globalFilters').querySelectorAll(':scope > :not(.seg)').forEach(el => el.classList.toggle('off', hideF && !(tab==='budget' && el.contains($('#fSmooth')))));
+  $('#dataStamp').textContent = !TX.length ? 'Операцій поки немає — внесіть першу в «Кишеньці»' : `${OPS(TX.length)} з ${dayStr(TX[0].day)} по ${dayStr(TX[TX.length-1].day)} · усе в ${S.cur==='EUR'?'євро':'доларах'}: як є або за курсом із налаштувань`;
+  document.querySelectorAll('.sym').forEach(e => e.textContent = SYM());
+  if (tab==='pocket') renderPocket();
+  if (tab==='overview') renderOverview();
+  if (tab==='budget') renderBudget();
+  if (tab==='spending') renderSpending();
+  if (tab==='ops') renderOps();
+  if (tab==='advice') renderAdvice();
+  if (tab==='data') renderSetup();
+}
+function fillPeriod(){
+  const ys = []; for (let y=Math.floor(MAX_YM/12); y>=Math.floor(MIN_YM/12); y--) ys.push(y);
+  $('#fPeriod').innerHTML = '<option value="l12">останні 12 міс</option>' + ys.map(y=>`<option value="${y}">${y}</option>`).join('') + '<option value="all">увесь час</option><option value="custom">свій період…</option>';
+  $('#fPeriod').value = S.period;
+  $('#fFrom').value = ymToInput(MAX_YM-23); $('#fTo').value = ymToInput(MAX_YM);
+  S.from = MAX_YM-23; S.to = MAX_YM;
+}
+function applyData(data){
+  data.balanceDayNum = Math.round((Date.parse(data.lastTx)-BASE)/DAY);
+  decode(data); fillPeriod(); fillOpsSelectors();
+  if (!$('#bMonth').value) $('#bMonth').value = ymToInput(Math.max(MAX_YM, new Date().getFullYear()*12+new Date().getMonth()));
+  render();
+}
+function wire(){
+  window.addEventListener('hashchange', () => { render(); window.scrollTo({top:0}); });
+  const setCur = c => { S.cur = c; lsSet('cur', c); $('#cUSD').setAttribute('aria-pressed', c==='USD'); $('#cEUR').setAttribute('aria-pressed', c==='EUR'); draft = null; render(); };
+  $('#cUSD').onclick = () => setCur('USD'); $('#cEUR').onclick = () => setCur('EUR');
+  $('#cUSD').setAttribute('aria-pressed', S.cur==='USD'); $('#cEUR').setAttribute('aria-pressed', S.cur==='EUR');
+  $('#fPeriod').onchange = e => { S.period = e.target.value; $('#customRange').hidden = S.period!=='custom'; render(); };
+  $('#fFrom').onchange = e => { S.from = inputToYm(e.target.value); render(); };
+  $('#fTo').onchange = e => { S.to = inputToYm(e.target.value); render(); };
+  $('#fPerson').onchange = e => { S.person = e.target.value; render(); };
+  $('#fOneoff').onchange = e => { S.oneoff = e.target.checked; render(); };
+  $('#fSmooth').onchange = e => { S.smooth = e.target.checked; buildView(); render(); };
+  $('#tblOps').addEventListener('change', e => { const sel = e.target.closest('select.spr'); if (sel) setSpread(sel.dataset.k, +sel.value); });
+  ['oSearch','oKind','oGroup','oAcct','oCur','oMin'].forEach(id => $('#'+id).addEventListener('input', () => { S.opsShown=100; renderOps(); }));
+  $('#oMore').onclick = () => { S.opsShown += 200; renderOps(); };
+  $('#bMonth').onchange = renderBudget;
+  $('#aAmt').oninput = renderAfford; $('#aGroup').onchange = renderAfford;
+  $('#btnFillAvg').onclick = fillByAverage;
+  $('#btnStartBudget').onclick = fillByAverage;
+
+  const rerender = () => { chartDefaults(); render(); };
+  window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', rerender);
+  new MutationObserver(rerender).observe(document.documentElement, {attributes:true, attributeFilter:['data-theme']});
+}
+
+function localDB(){   // tiny localStorage stand-in with the same doc/collection/onSnapshot shape
+  const KEY = 'pocket-offline-db'; let store = {};
+  try { store = JSON.parse(localStorage.getItem(KEY) || '{}'); } catch(e){}
+  const subs = [], save = () => { try { localStorage.setItem(KEY, JSON.stringify(store)); } catch(e){ showErr('браузер не дав зберегти дані: ' + e.message); } subs.forEach(f => f()); };
+  const snapOf = path => ({exists: path in store, id: path.split('/').pop(), data: () => store[path]});
+  const docRef = path => ({ id: path.split('/').pop(), path,
+    get: async () => snapOf(path),
+    set: async d => { store[path] = JSON.parse(JSON.stringify(d)); save(); },
+    update: async d => { store[path] = {...(store[path]||{}), ...JSON.parse(JSON.stringify(d))}; save(); },
+    delete: async () => { delete store[path]; save(); },
+    onSnapshot: next => { const f = () => next(snapOf(path)); subs.push(f); setTimeout(f, 0); return () => {}; } });
+  const docsIn = path => Object.keys(store).filter(k => k.startsWith(path + '/') && k.split('/').length === path.split('/').length + 1).map(snapOf);
+  const coll = path => ({ path,
+    doc: id => docRef(path + '/' + (id || Date.now().toString(36) + Math.random().toString(36).slice(2, 7))),
+    add: async d => { const r = coll(path).doc(); await r.set(d); return r; },
+    get: async () => { const docs = docsIn(path); return {docs, size: docs.length, empty: !docs.length}; },
+    onSnapshot: next => { const f = () => { const docs = docsIn(path); next({docs, size: docs.length, empty: !docs.length}); }; subs.push(f); setTimeout(f, 0); return () => {}; } });
+  return {doc: docRef, collection: coll, offline: true};
+}
+let downloads = null;
+async function connectCaps(){
+  if (!window.claude || !window.claude.use){
+    if (location.hostname.endsWith('claude.ai') || location.hostname.endsWith('claudeusercontent.com')) return;
+    db = localDB(); document.documentElement.classList.add('offline');
+    const b = document.getElementById('offlineBanner'); if (b) b.hidden = false;
+  } else {
+    try { [db, assets, downloads] = await Promise.all([window.claude.use('db'), window.claude.use('assets'), window.claude.use('downloads')]); } catch(e){ db = null; }
+  }
+  if (!db) return;
+  db.doc('meta/backup').onSnapshot(snap => { BKMETA = snap.exists ? snap.data() : null; renderBackupInfo(); }, () => {});
+  // shared budget
+  db.doc('budget/plan').onSnapshot(snap => {
+    budget = snap.exists ? snap.data() : null; draft = null;
+    if (!snap.exists && !budgetSeeded){ budgetSeeded = true; db.doc('budget/plan').set(defaultBudget()).catch(() => {}); }
+    if (currentTab()==='budget') renderBudget();
+    if (currentTab()==='pocket') render();
+  }, () => {});
+  db.doc('pocket/config').onSnapshot(snap => { PKCFG = snap.exists ? snap.data() : null;
+    if (D && D.synthetic){ D = emptyDataset(); decode(D); }
+    if (!PKCFG && currentTab()==='pocket') location.hash = 'data';
+    render(); }, () => {});
+  db.collection('pocketFunds').onSnapshot(snap => {
+    PKALLOC = {}; snap.docs.forEach(d => PKALLOC[d.id] = d.data());
+    if (currentTab()==='pocket') render();
+  }, () => {});
+  db.collection('pocketTx').onSnapshot(snap => {
+    PK = snap.docs.map(d => ({id:d.id, ...d.data()}));
+    if (D){ decode(D); fillOpsSelectors(); } render();
+  }, () => {});
+  db.collection('spread').onSnapshot(snap => {
+    SPREAD = {}; snap.docs.forEach(d => { const v = d.data(); if (v && v.months>1) SPREAD[d.id] = v.months; });
+    if (D){ buildView(); render(); }
+  }, () => {});
+
+}
+
+// decimal fields: phones in many locales only offer a comma on the numeric keypad — accept it, keep only digits, one dot and a leading minus
+document.addEventListener('input', e => {
+  const t = e.target; if (!(t instanceof HTMLInputElement) || t.inputMode !== 'decimal') return;
+  const v = t.value; let c = v.replace(/,/g, '.').replace(/[^\d.\-]/g, '').replace(/(?!^)-/g, '');
+  const i = c.indexOf('.'); if (i >= 0) c = c.slice(0, i+1) + c.slice(i+1).replace(/\./g, '');
+  if (c !== v){ const pos = (t.selectionStart ?? v.length) - (v.length - c.length); t.value = c; try { t.setSelectionRange(pos, pos); } catch(_){} }
+}, true);
+(async function start(){
+  S.cur = lsGet('cur')==='EUR' ? 'EUR' : 'USD';
+  applyConfigUI(); chartDefaults(); wire(); wirePocket(); wireSetup();
+  $('#bkJson').onclick = e => doBackup(e.currentTarget); $('#bkCsv').onclick = doCsv;
+  $('#bkIn').onchange = e => { const f = e.target.files[0]; if (f) readBackupFile(f); e.target.value = ''; };
+  budget = lsGet('budget'); SPREAD = lsGet('spread') || {};
+  const caps = connectCaps();
+  if (currentTab()==='pocket') render();
+  try {
+    let data = window.__datasetLoader ? await window.__datasetLoader() : null;
+    if (!data) data = emptyDataset();
+    $('#loading').hidden = true; applyData(data);
+  } catch(e){ $('#loading').textContent = 'Не вдалося завантажити дані: ' + e.message; return; }
+  await caps;
+})();
+</script>
+</body></html>
