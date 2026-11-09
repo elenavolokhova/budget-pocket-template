@@ -25,7 +25,7 @@
 |---|---|
 | `budget/plan` | `groups` (USD/міс), `income`, `savings`, `buckets`, `roles`, `goals` `{target, by:'YYYY-MM', every, what}`, `cushion` `{start, target, overflow}`, `allowances` |
 | `pocket/config` | `accounts[{name,cur,start}]`, `startDate`, `firstMonth`, `rates` (одиниць `rateBase` за 1 одиницю валюти) |
-| `pocketTx/*` | операції: `{type: exp/inc/tr/adj, date, amount, cur, account, account2, amount2, group, tags, who, note, eur}`; `who` — ім’я людини або `'спільні'` |
+| `pocketTx/*` | операції: `{type: exp/inc/tr/adj, date, amount, cur, account, account2, amount2, group, tags, who, note, eur, createdAt, editedAt}`; редагування — `pkEdit(id)` відкриває форму з даними операції й перезаписує той самий документ; `who` — ім’я людини або `'спільні'` |
 | `pocketFunds/*` | розкладання (`YYYY-MM`), закриття місяців (`close-YYYY-MM`), виправлення (`adj-*`): `{funds:{group:usd}, savings:usd}` |
 | `spread/*` | на скільки місяців розмазати операцію |
 | `meta/backup` | дата останньої резервної копії |

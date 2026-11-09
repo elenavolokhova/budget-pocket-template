@@ -896,8 +896,9 @@ function renderOps(){
     const asis = S.cur==='EUR' ? t.eurAsis : t.usdAsis;
     const tgt = S.cur==='EUR' ? 'EUR' : 'USD', rt = rateOn(t.day,tgt)/rateOn(t.day,t.cur);
     const how = asis ? 'як є' : 'курс ' + fmtN(rt, rt<10?3:2) + ' ' + t.cur + '/' + SYM();
-    h += `<tr><td class="mono" style="white-space:nowrap">${dayStr(t.day)}</td><td>${esc(t.name)}<div class="muted" style="font-size:.78rem">${esc(t.group)}</div></td><td>${esc(t.acct)}</td><td style="min-width:160px">${esc(t.note)}${t.tags.length?`<div class="muted" style="font-size:.78rem">${t.tags.map(esc).join(', ')}</div>`:''}</td><td class="n">${fmtN(t.amt,2)}<span class="cur">${t.cur}</span>${k2}</td><td class="n" style="color:var(${t.inc?'--good':'--ink'})">${t.inc?'+':''}${fmt(V(t),2)}<div class="muted" style="font-size:.72rem;color:var(${asis?'--good':'--muted'})">${asis?'✓ ':''}${how}</div></td><td class="n">${t.inc?'':spreadSel(t)}</td></tr>`; });
+    h += `<tr><td class="mono" style="white-space:nowrap">${dayStr(t.day)}</td><td>${esc(t.name)}<div class="muted" style="font-size:.78rem">${esc(t.group)}</div>${t.pkId ? `<button class="linkbtn ops-edit" type="button" data-id="${t.pkId}">змінити</button>` : ''}</td><td>${esc(t.acct)}</td><td style="min-width:160px">${esc(t.note)}${t.tags.length?`<div class="muted" style="font-size:.78rem">${t.tags.map(esc).join(', ')}</div>`:''}</td><td class="n">${fmtN(t.amt,2)}<span class="cur">${t.cur}</span>${k2}</td><td class="n" style="color:var(${t.inc?'--good':'--ink'})">${t.inc?'+':''}${fmt(V(t),2)}<div class="muted" style="font-size:.72rem;color:var(${asis?'--good':'--muted'})">${asis?'✓ ':''}${how}</div></td><td class="n">${t.inc?'':spreadSel(t)}</td></tr>`; });
   $('#tblOps').innerHTML = h + '</tbody>';
+  $('#tblOps').querySelectorAll('.ops-edit').forEach(b => b.onclick = () => pkEdit(b.dataset.id));
   $('#oMore').hidden = rows.length <= S.opsShown;
 }
 
@@ -1599,10 +1600,16 @@ function renderPocket(){
     const title = o.type==='exp' ? o.group : o.type==='inc' ? (o.source||'Дохід') : o.type==='tr' ? `${o.account} → ${o.account2}` : 'Виправлення залишку';
     const sub = [o.date.split('-').reverse().join('.'), o.type==='tr'||o.type==='adj' ? '' : o.account, o.type==='exp' && o.who && o.who!=='спільні' ? o.who : '', o.note].filter(Boolean).join(' · ');
     return `<div class="pk-li"><div class="nm">${esc(title)}<small>${esc(sub)}</small></div><div class="fig">${sign}${fmtN(Math.abs(+o.amount),2)} ${o.cur}
-      <small class="acts"><button class="linkbtn pk-del" type="button" data-id="${o.id}">видалити</button></small></div></div>`; }).join('') || '<p class="note">Тут з’являться операції, які ви внесете в «Кишеньку».</p>';
+      <small class="acts">${o.type==='adj' ? '' : `<button class="linkbtn pk-edit" type="button" data-id="${o.id}">змінити</button> · `}<button class="linkbtn pk-del" type="button" data-id="${o.id}">видалити</button></small></div></div>`; }).join('') || '<p class="note">Тут з’являться операції, які ви внесете в «Кишеньку».</p>';
+  $('#pkRecent').querySelectorAll('.pk-edit').forEach(b => b.onclick = () => pkEdit(b.dataset.id));
   $('#pkRecent').querySelectorAll('.pk-del').forEach(b => b.onclick = async () => {
     if (b.dataset.armed){ try { await db.doc('pocketTx/'+b.dataset.id).delete(); } catch(e){ showErr(e.message||e.code); } }
     else { b.dataset.armed = '1'; b.textContent = 'точно видалити?'; b.style.color = 'var(--crit)'; setTimeout(()=>{ delete b.dataset.armed; b.textContent='видалити'; b.style.color=''; }, 4000); } });
+}
+function pkEdit(id){
+  const o = PK.find(x => x.id===id); if (!o){ showErr('Цю операцію вже видалено.'); return; }
+  if (currentTab()!=='pocket') location.hash = 'pocket';
+  setTimeout(() => pkOpen(o.type, {edit:o}), 0);
 }
 async function pkFixBalance(name){
   const a = pkAccountBalances().find(x => x.name===name); if (!a) return;
@@ -1688,19 +1695,30 @@ function pkRenderTags(){
   $('#pkTags').innerHTML = tags.map(t => `<button type="button" data-tag="${esc(t)}" aria-pressed="${pkTagSel.has(t)}">${esc(t)}</button>`).join('') +
     `<div class="pk-tagsearch"><input type="text" id="pkTagNew" placeholder="знайти або додати мітку" maxlength="30" autocomplete="off" aria-label="Знайти або додати мітку"><div class="pk-dd" id="pkTagDD" hidden></div></div>`;
 }
+let pkEditId = null, pkEditDoc = null;
 function pkOpen(type, opts={}){
   pkType = type; const f = $('#pkForm'); f.reset(); $('#pkFormMsg').textContent = ''; pkTagSel = new Set();
+  pkEditId = opts.edit ? opts.edit.id : null; pkEditDoc = opts.edit || null;
+  if (pkEditDoc){ if (pkEditDoc.group) pkCat = pkEditDoc.group; if (pkEditDoc.who) pkWho = pkEditDoc.who; pkTagSel = new Set(pkEditDoc.tags || []); }
   const accs = ((PKCFG && PKCFG.accounts) || []).map(a => a.name);
   const lastAcc = lsGet('pkAcct'); const opt = accs.map(a => `<option ${a===lastAcc?'selected':''}>${esc(a)}</option>`).join('');
   $('#pkAcct').innerHTML = opt; $('#pkAcct2').innerHTML = accs.map(a => `<option>${esc(a)}</option>`).join('');
   const cats = pkCategories(), freq = pkFrequent();
   if (opts.who) pkWho = opts.who;
   if (opts.want){ const wantCats = cats.filter(g => roleOf(g)==='want' && !PK_NO_BUTTON.includes(g)); if (!wantCats.includes(pkCat)) pkCat = wantCats[0]; }
-  if (!pkCat || !cats.includes(pkCat)) pkCat = freq[0] || cats[0];
+  if (!(pkEditDoc && pkEditDoc.group) && (!pkCat || !cats.includes(pkCat))) pkCat = freq[0] || cats[0];
   const btnCats = opts.want ? cats.filter(g => roleOf(g)==='want' && !PK_NO_BUTTON.includes(g)) : freq;
   $('#pkCats').innerHTML = btnCats.map(g => `<button type="button" data-g="${esc(g)}" aria-pressed="${g===pkCat}">${esc(g)}</button>`).join('');
   $('#pkCatAll').innerHTML = '<option value="" disabled>усі категорії…</option>' + cats.map(g => `<option ${g===pkCat?'selected':''}>${esc(g)}</option>`).join('');
   $('#pkDate').value = todayISO();
+  if (pkEditDoc){ const o = pkEditDoc;   // fill the form with the operation being edited
+    const btnHas = [...$('#pkCats').querySelectorAll('button')].some(b => b.dataset.g===pkCat);
+    if (!btnHas && o.group) $('#pkCats').insertAdjacentHTML('afterbegin', `<button type="button" data-g="${esc(o.group)}">${esc(o.group)}</button>`);
+    if (o.group && !cats.includes(o.group)) $('#pkCatAll').insertAdjacentHTML('beforeend', `<option>${esc(o.group)}</option>`);
+    $('#pkCatAll').value = pkCat;
+    $('#pkAmt').value = o.amount; $('#pkAcct').value = o.account; if (o.account2) $('#pkAcct2').value = o.account2;
+    if (o.amount2 && o.cur2 !== o.cur) $('#pkAmt2').value = o.amount2; if (o.eur) $('#pkEur').value = o.eur;
+    $('#pkDate').value = o.date; $('#pkNote').value = o.note || ''; if (o.source) $('#pkSrc').value = o.source; }
   pkRenderTags(); pkSync(); $('#pkSheet').hidden = false; setTimeout(()=>$('#pkAmt').focus(), 50);
 }
 function pkSync(){
@@ -1716,7 +1734,7 @@ function pkSync(){
   $('#pkAmt2Row').hidden = pkType!=='tr' || c1===c2;
   $('#pkEurRow').hidden = pkType!=='exp' || c1==='EUR';
   $('#pkAcctLabel').textContent = pkType==='tr' ? 'Звідки' : pkType==='inc' ? 'На рахунок' : 'Рахунок';
-  $('#pkSave').textContent = pkType==='exp' ? 'Зберегти витрату' : pkType==='inc' ? 'Зберегти дохід' : 'Зберегти переказ';
+  $('#pkSave').textContent = pkEditId ? 'Зберегти зміни' : pkType==='exp' ? 'Зберегти витрату' : pkType==='inc' ? 'Зберегти дохід' : 'Зберегти переказ';
   // what this purchase does to the wants limit
   const hint = $('#pkWantHint');
   if (pkType==='exp' && roleOf(pkCat)==='want'){
@@ -1742,7 +1760,8 @@ async function pkSave(e){
     doc.account2 = b.name; doc.cur2 = b.cur; doc.amount2 = b.cur===a.cur ? doc.amount : (+$('#pkAmt2').value || 0);
     if (b.cur!==a.cur && !(doc.amount2 > 0)){ $('#pkFormMsg').textContent = `Скільки надійшло на «${b.name}» в ${b.cur}?`; return; } }
   $('#pkSave').disabled = true;
-  try { await db.collection('pocketTx').add(doc); lsSet('pkAcct', acc); lsSet('pkWho', pkWho); $('#pkSheet').hidden = true; }
+  if (pkEditId){ doc.createdAt = (pkEditDoc && pkEditDoc.createdAt) || doc.createdAt; doc.editedAt = new Date().toISOString(); }
+  try { if (pkEditId) await db.doc('pocketTx/' + pkEditId).set(doc); else await db.collection('pocketTx').add(doc); pkEditId = null; pkEditDoc = null; lsSet('pkAcct', acc); lsSet('pkWho', pkWho); $('#pkSheet').hidden = true; }
   catch(err){ $('#pkFormMsg').textContent = 'Не вдалося зберегти: ' + (err.code==='permission_denied' || err.code==='not_granted' ? 'потрібен доступ до сторінки з правом редагування' : (err.message||err.code)); }
   $('#pkSave').disabled = false;
 }
@@ -1750,7 +1769,7 @@ function wirePocket(){
   $('#pkPrev').onclick = () => { pkMonthYM = (pkMonthYM ?? nowYM()) - 1; render(); };
   $('#pkNext').onclick = () => { pkMonthYM = Math.min(nowYM(), (pkMonthYM ?? nowYM()) + 1); if (pkMonthYM===nowYM()) pkMonthYM = null; render(); };
   $('#pkAdd').onclick = () => pkOpen('exp'); $('#pkAddInc').onclick = () => pkOpen('inc'); $('#pkAddTr').onclick = () => pkOpen('tr');
-  $('#pkClose').onclick = () => { $('#pkSheet').hidden = true; };
+  $('#pkClose').onclick = () => { $('#pkSheet').hidden = true; pkEditId = null; pkEditDoc = null; };
   $('#pkSheet').addEventListener('click', e => { if (e.target.id==='pkSheet') $('#pkSheet').hidden = true; });
   $('#pkForm').querySelectorAll('.pk-form-head .seg button').forEach(b => b.onclick = () => { pkType = b.dataset.t; pkSync(); });
   $('#pkForm').querySelectorAll('.pk-who button').forEach(b => b.onclick = () => { pkWho = b.dataset.w; pkSync(); });
