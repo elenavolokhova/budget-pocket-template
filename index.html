@@ -419,7 +419,6 @@ select.spr{font-size:.78rem;background:var(--surface-2);border:1px solid var(--l
       </div>
       <div id="budBody">
         <div class="bud-sum" id="budSum"></div>
-        <div style="margin-top:16px" id="budTotal"></div>
         <p class="note" style="margin-top:6px" id="budPaceNote"></p>
       </div>
     </div>
@@ -969,9 +968,9 @@ const wantKey = w => WANT_PREF + w;
 const wantOfKey = g => typeof g === 'string' && g.startsWith(WANT_PREF) ? g.slice(WANT_PREF.length) : null;
 const txWho = t => (t.who && WHO.includes(t.who) ? t.who : 'спільні');
 function viewSpent(rows){ const o = {}; rows.forEach(t => { const g = roleOf(t.group)==='want' ? wantKey(txWho(t)) : t.group; o[g] = (o[g]||0) + V(t); }); return o; }
-function budView(){   // stored USD per month
+function budView(ym = budgetMonth()){   // stored USD per month; funds = what is (or will be) put aside that month
   const G = budget && budget.groups ? budget.groups : {}, out = {};
-  Object.entries(G).forEach(([g,v]) => { if (roleOf(g)!=='want') out[g] = +v||0; });
+  Object.entries(G).forEach(([g,v]) => { if (roleOf(g)==='fund'){ const f = fundMonthUSD(g, ym); if (f > 0) out[g] = f; } else if (roleOf(g)!=='want') out[g] = +v||0; });
   WHO.forEach(w => { if (allowOf(w)) out[wantKey(w)] = allowOf(w); });
   return out;
 }
@@ -1006,7 +1005,6 @@ function renderBudget(){
       <div><div class="eyebrow">Витрачено</div><div class="v">${fmt(totS)}</div></div>
       <div><div class="eyebrow">${left>=0?'Можна ще витратити':'Перевитрата'}</div><div class="v" style="color:var(${left>=0?'--good':'--warn'})">${fmt(Math.abs(left))}</div>${fundLeft>0.5 ? `<div class="note">звичайні витрати й забаганки · ще ${fmt(fundLeft)} лежить у фондах</div>` : '<div class="note">звичайні витрати й забаганки</div>'}</div>
       <div><div class="eyebrow">Відкладаємо</div><div class="v">${fmt(sav)}</div><div class="note">${inc? fmtN(sav/inc*100,0)+'% від доходу '+fmt(inc):''}</div></div>`;
-    $('#budTotal').innerHTML = barRow({g:null, name:'Усі витрати місяця', b:totB, s:totS, pace, total:true});
     const now = new Date(), daysLeft = new Date(now.getFullYear(), now.getMonth()+1, 0).getDate() - now.getDate() + 1;
     $('#budPaceNote').textContent = pace<1 && pace>0 ? `Минуло ${fmtN(pace*100,0)}% місяця, витрачено ${fmtN(totB?totS/totB*100:0,0)}% бюджету. До кінця місяця ${daysLeft} дн.: можна витрачати близько ${fmt(Math.max(0,left)/daysLeft)} на день.` : (pace===0 ? 'Місяць ще не почався.' : budgetMonth()===now.getFullYear()*12+now.getMonth() ? `Сьогодні останній день місяця: витрачено ${fmtN(totB?totS/totB*100:0,0)}% бюджету.` : `Місяць закрито: ${fmtN(totB?totS/totB*100:0,0)}% бюджету.`);
   } else $('#budStatus').innerHTML = '';
