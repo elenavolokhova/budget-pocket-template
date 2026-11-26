@@ -1614,7 +1614,7 @@ function cushRow(){
 // wants roll over on their own, funds keep their own balance.
 function pkLeftoverUSD(ym){
   const G = budget && budget.groups ? budget.groups : {}, k = budK(), sp = spentIn(ym);
-  const adj = adjFor(ym), planned = Object.entries(G).filter(([g]) => roleOf(g)!=='want').reduce((s,[,v])=>s+(+v||0),0) + allowTotal() + (+(budget && budget.savings)||0);
+  const adj = adjFor(ym), planned = Object.entries(G).filter(([g]) => roleOf(g)!=='want').reduce((s,[g,v])=>s+(roleOf(g)==='fund' ? fundMonthUSD(g, ym) : (+v||0)),0) + allowTotal() + (+(budget && budget.savings)||0);
   let r = (+(budget && budget.income)||0) - planned;
   [...new Set([...Object.keys(G), ...Object.keys(sp)])].filter(g => roleOf(g)==='regular').forEach(g => r += (+G[g]||0) + (adj.groups[g]||0) - (sp[g]||0)/k);
   return Math.round(r*100)/100;
@@ -1624,9 +1624,16 @@ function pkPendingClose(){
   for (let ym = pkStartYM(); ym < nowYM(); ym++) if (!PKALLOC['close-' + ymKey(ym)]) return ym;
   return null;
 }
+// monthly put-aside for a fund in month ym; a one-off goal (no `every`) stops once it is collected
+function fundMonthUSD(g, ym){
+  const v = +((budget && budget.groups || {})[g]) || 0, G0 = goalOf(g);
+  if (!G0 || +G0.every > 0) return v;
+  const key = ymKey(ym), saved = Object.entries(PKALLOC).filter(([k]) => k !== key).reduce((s,[,a]) => s + (+((a.funds||{})[g])||0), 0);
+  return Math.max(0, Math.min(v, Math.round((+G0.target - saved)*100)/100));
+}
 function pkPlanAlloc(){
   const G = budget && budget.groups ? budget.groups : {};
-  const funds = Object.fromEntries(Object.entries(G).filter(([g,v]) => roleOf(g)==='fund' && +v>0).map(([g,v]) => [g, +v]));
+  const funds = Object.fromEntries(Object.entries(G).filter(([g,v]) => roleOf(g)==='fund' && +v>0).map(([g]) => [g, fundMonthUSD(g, nowYM())]).filter(([,v]) => v > 0));
   const sp = cushSplit(+(budget && budget.savings) || 0), c = cushCfg();
   if (sp.over > 0) funds[c.overflow] = (funds[c.overflow]||0) + sp.over;
   return {funds, savings: sp.cush};
