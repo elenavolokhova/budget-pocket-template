@@ -963,6 +963,20 @@ function avgL12ByGroup(){
   const out = {}; TXV.filter(t=>!t.inc && t.ym>MAX_YM-12 && t.ym<=MAX_YM).forEach(t=>out[t.group]=(out[t.group]||0)+V(t)/12); return out;
 }
 function avgL12Income(){ return TX.filter(t=>t.inc && !t.oneoff && t.ym>MAX_YM-12).reduce((s,t)=>s+V(t),0)/12; }
+/* ---- budget view: want categories are budgeted per person (allowances), not per category ---- */
+const WANT_PREF = 'Забаганки · ';
+const wantKey = w => WANT_PREF + w;
+const wantOfKey = g => typeof g === 'string' && g.startsWith(WANT_PREF) ? g.slice(WANT_PREF.length) : null;
+const txWho = t => (t.who && WHO.includes(t.who) ? t.who : 'спільні');
+function viewSpent(rows){ const o = {}; rows.forEach(t => { const g = roleOf(t.group)==='want' ? wantKey(txWho(t)) : t.group; o[g] = (o[g]||0) + V(t); }); return o; }
+function budView(){   // stored USD per month
+  const G = budget && budget.groups ? budget.groups : {}, out = {};
+  Object.entries(G).forEach(([g,v]) => { if (roleOf(g)!=='want') out[g] = +v||0; });
+  WHO.forEach(w => { if (allowOf(w)) out[wantKey(w)] = allowOf(w); });
+  return out;
+}
+const spentInView = ym => viewSpent(TXV.filter(t=>!t.inc && t.ym===ym));
+const avgL12View = () => { const o = viewSpent(TXV.filter(t=>!t.inc && t.ym>MAX_YM-12 && t.ym<=MAX_YM)); Object.keys(o).forEach(g => o[g] /= 12); return o; };
 function budgetMonth(){ return inputToYm($('#bMonth').value || ymToInput(MAX_YM)); }
 function spentIn(ym){ const o={}; TXV.filter(t=>!t.inc && t.ym===ym).forEach(t=>o[t.group]=(o[t.group]||0)+V(t)); return o; }
 function paceFrac(ym){
@@ -976,8 +990,8 @@ function renderBudget(){
   $('#budEmpty').hidden = !!has; $('#budBody').hidden = !has;
   renderEditor();
   const ym = budgetMonth(); $('#budTitle').textContent = 'Бюджет: ' + ymLong(ym);
-  const spent = spentIn(ym), pace = paceFrac(ym), avg = avgL12ByGroup();
-  const kB = budK(); const B = has ? Object.fromEntries(Object.entries(budget.groups).map(([g,v])=>[g,(+v||0)*kB])) : {};
+  const spent = spentInView(ym), pace = paceFrac(ym), avg = avgL12View();
+  const kB = budK(); const B = has ? Object.fromEntries(Object.entries(budView()).map(([g,v])=>[g,(+v||0)*kB])) : {};
   const totB = Object.values(B).reduce((s,v)=>s+(+v||0),0);
   const totS = Object.values(spent).reduce((s,v)=>s+v,0);
   const left = totB - totS;
@@ -1005,7 +1019,7 @@ function renderBudget(){
 
   // history
   let hh = '<thead><tr><th>Місяць</th><th class="n">Витрачено</th><th class="n">Бюджет</th><th class="n">Дохід</th><th></th></tr></thead><tbody>';
-  for (let k=0;k<6;k++){ const m = MAX_YM-k; const sp = Object.values(spentIn(m)).reduce((s,v)=>s+v,0);
+  for (let k=0;k<6;k++){ const m = MAX_YM-k; const sp = Object.values(spentInView(m)).reduce((s,v)=>s+v,0);
     const ic = TX.filter(t=>t.inc && t.ym===m && !t.oneoff).reduce((s,t)=>s+V(t),0);
     const st = !has ? '' : sp<=totB ? '<span class="pill good">у межах</span>' : `<span class="pill ${overSev(sp,totB,false)==='soft'?'neutral':'warn'}">+${fmt(sp-totB)}</span>`;
     hh += `<tr><td>${ymLong(m)}</td><td class="n">${fmt(sp)}</td><td class="n">${has?fmt(totB):'—'}</td><td class="n">${fmt(ic)}</td><td class="n">${st}</td></tr>`; }
@@ -1016,7 +1030,7 @@ let donutSel = null, donutHover = null, DON = null, MINOR_TONE = {};
 // legend/sector order is fixed once shown, so editing an amount doesn't make rows jump; re-sorted only on request
 let LEG_ORDER = null;
 // minor groups share the neutral, alternating two tones so neighbouring sectors stay apart
-const groupColorVar = g => GROUP_COLOR[g] || MINOR_TONE[g] || '--s0';
+const groupColorVar = g => GROUP_COLOR[g] || (wantOfKey(g)!=null ? '--s2' : '') || MINOR_TONE[g] || '--s0';
 function arcPath(r0, r1, a0, a1){
   const P = (r,a) => [(r*Math.cos(a)).toFixed(2), (r*Math.sin(a)).toFixed(2)];
   const L = a1-a0 > Math.PI ? 1 : 0, [x0,y0]=P(r1,a0), [x1,y1]=P(r1,a1), [x2,y2]=P(r0,a1), [x3,y3]=P(r0,a0);
@@ -1118,7 +1132,7 @@ function barRow({g, name, b, s, pace, avg, total}){
     <div class="bamt">${amt}</div></div>`;
 }
 function startInlineEdit(btn){
-  const g = btn.dataset.g, k = budK(), cur = budget && budget.groups ? (+budget.groups[g]||0)*k : 0;
+  const g = btn.dataset.g, k = budK(), cur = wantOfKey(g)!=null ? (allowOf(wantOfKey(g))||0)*k : budget && budget.groups ? (+budget.groups[g]||0)*k : 0;
   const box = btn.parentElement;
   box.innerHTML = `<input type="text" inputmode="decimal" min="0" step="5" id="inl-${Math.abs([...g].reduce((h,c)=>h*31+c.charCodeAt(0)|0,7))}" value="${cur?Math.round(cur):''}" aria-label="Бюджет: ${esc(g)}"><span class="hint">Enter — зберегти</span>`;
   const inp = box.querySelector('input'); inp.focus(); inp.select();
@@ -1131,6 +1145,7 @@ function startInlineEdit(btn){
   inp.addEventListener('blur', () => finish(true));
 }
 async function saveGroupBudget(g, usdValue){
+  if (wantOfKey(g)!=null){ const a = {...((budget && budget.allowances) || {})}; a[wantOfKey(g)] = usdValue==null ? 0 : Math.round(usdValue*100)/100; return saveBudgetPatch({allowances: a}); }
   const base = budget && budget.groups ? budget : {groups:{}, savings:0, income:Math.round(avgL12Income()/budK())};
   const groups = {...base.groups};
   if (usdValue==null) delete groups[g]; else groups[g] = Math.round(usdValue*100)/100;
@@ -1143,8 +1158,8 @@ function renderAfford(){
   const amt = +$('#aAmt').value || 0, g = $('#aGroup').value, ym = budgetMonth();
   const el = $('#aAnswer');
   if (!budget || !budget.groups || !Object.keys(budget.groups).length){ el.className='answer'; el.innerHTML='Спочатку задайте бюджет нижче, тоді тут буде відповідь.'; return; }
-  const kB = budK(), spent = spentIn(ym), B = Object.fromEntries(Object.entries(budget.groups).map(([g,v])=>[g,(+v||0)*kB]));
-  const gl = (+B[g]||0) - (spent[g]||0);
+  const kB = budK(), spent = spentInView(ym), B = Object.fromEntries(Object.entries(budView()).map(([g,v])=>[g,(+v||0)*kB]));
+  const gl = roleOf(g)==='want' ? WHO.reduce((s,w) => s + (B[wantKey(w)]||0) - (spent[wantKey(w)]||0), 0) : (+B[g]||0) - (spent[g]||0);
   const totB = Object.values(B).reduce((s,v)=>s+(+v||0),0), totS = Object.values(spent).reduce((s,v)=>s+v,0);
   const tl = totB - totS, sav = (+budget.savings||0)*kB;
   let cls, msg;
@@ -1177,7 +1192,7 @@ function goalInfo(g, have){
   const left = Math.max(1, byYM - nowYM());
   return {target, by: MONTHS_DAT[byYM%12] + ' ' + Math.floor(byYM/12), what: G.what || '', need: Math.max(0, target - (have||0))/left, pct, left};
 }
-const bucketOf = g => (budget && budget.buckets && budget.buckets[g]) || DEFAULT_BUCKET[g] || 'free';
+const bucketOf = g => wantOfKey(g)!=null ? 'free' : (budget && budget.buckets && budget.buckets[g]) || DEFAULT_BUCKET[g] || 'free';
 async function saveBudgetPatch(patch){
   const base = budget && budget.groups ? budget : {groups:{}, savings:0, income:Math.round(avgL12Income()/budK())};
   const doc = {...base, ...patch, updatedAt:new Date().toISOString()};
@@ -1187,9 +1202,9 @@ async function saveBudgetPatch(patch){
 }
 function renderEditor(){
   const kB = budK(), ym = budgetMonth();
-  const G = budget && budget.groups ? budget.groups : {};
+  const G = budView();
   const planInc = (+(budget&&budget.income)||0)*kB, planSave = (+(budget&&budget.savings)||0)*kB, planInv = (+(budget&&budget.investments)||0)*kB;
-  const spent = spentIn(ym), avg = avgL12ByGroup();
+  const spent = spentInView(ym), avg = avgL12View();
   const incM = TX.filter(t=>t.inc && !t.oneoff && t.ym===ym).reduce((s,t)=>s+V(t),0);
   const incA = avgL12Income();
   const sumBy = (obj, b) => Object.entries(obj).filter(([g])=>bucketOf(g)===b).reduce((s,[,v])=>s+(+v||0),0);
@@ -1207,7 +1222,7 @@ function renderEditor(){
   };
   const meter = (b, p) => { const max = 80, l = b.lo/max*100, w = Math.max(1,(b.hi-b.lo)/max*100);
     return `<div class="bmeter"><div class="band" style="left:${l}%;width:${w}%"></div>${p!=null?`<div class="dot" style="left:${Math.min(100,Math.max(0,p/max*100))}%;background:var(${b.color})"></div>`:''}</div>`; };
-  let h = `<thead><tr><th>Кошик</th><th class="n">Орієнтир</th><th class="n">План</th><th class="n">${esc(ymLong(ym))}</th><th class="n">У середньому за 12 міс</th><th>Де ми</th></tr></thead><tbody>`;
+  let h = `<thead><tr><th>Кошик</th><th class="n">Орієнтир</th><th class="n">План</th><th class="n">${esc(ymLong(ym))}${paceFrac(ym)<1 ? `<br><small>минуло ${fmtN(paceFrac(ym)*100,0)}% місяця</small>` : ''}</th><th class="n">У середньому на місяць<br><small>за 12 міс</small></th><th>Де ми</th></tr></thead><tbody>`;
   BUCKETS.forEach(b => {
     const pp = pct(plan[b.id], planInc), pm = pct(month[b.id], incM||planInc), pa = pct(avgB[b.id], incA);
     const planCell = b.id==='invest' ? `<input type="text" inputmode="decimal" min="0" step="10" id="pInv" value="${Math.round(planInv)}" aria-label="Інвестиції на місяць"><small>${pctTxt(pp)}</small>`
