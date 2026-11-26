@@ -161,6 +161,7 @@ section.pk{max-width:560px;margin:0 auto;padding-bottom:84px}
 .pk-w .tap{font-size:.74rem;color:var(--accent);margin-top:4px}
 .pk-tags{display:flex;flex-wrap:wrap;gap:6px}
 .setup-row{gap:8px;align-items:center;margin:6px 0;flex-wrap:nowrap}.setup-row input[type=text],.setup-row select{min-width:0;flex:1;background:var(--surface-2);border:1px solid var(--line);border-radius:8px;padding:7px 9px;color:var(--ink);font:inherit}.setup-row select{flex:0 0 5.5em}.setup-row input[data-f=start]{flex:0 0 7em;text-align:right;font-family:var(--f-mono)}
+.pk-rec-form{display:grid;gap:8px;margin:10px 0}.pk-rec-form label{display:grid;gap:4px;font-size:.82rem;color:var(--muted)}.pk-rec-form input,.pk-rec-form select{background:var(--surface-2);border:1px solid var(--line);border-radius:8px;padding:8px 10px;color:var(--ink);font:inherit;min-width:0}.pk-rec-form .row2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px}
 .pk-goal{grid-column:1/-1;display:block;color:var(--muted);font-size:.78rem;margin-top:2px}
 .pk-mnav{display:flex;align-items:center;gap:6px}
 .pk-arrow{border:1px solid var(--line);background:var(--surface-2);border-radius:8px;width:30px;height:30px;font-size:1.1rem;line-height:1;cursor:pointer;color:var(--ink)}
@@ -320,6 +321,12 @@ select.spr{font-size:.78rem;background:var(--surface-2);border:1px solid var(--l
         <summary><h2>Фонди</h2><span class="note" id="pkFundsTotal"></span></summary>
         <div id="pkFunds"></div>
       </details>
+      <details class="card pk-fold" id="pkRecBox">
+        <summary><h2>Регулярні платежі</h2><span class="note" id="pkRecTotal"></span></summary>
+        <div id="pkRec"></div>
+        <div id="pkRecForm" hidden></div>
+        <button class="linkbtn" type="button" id="pkRecAdd">+ додати платіж</button>
+      </details>
       <details class="card pk-fold" id="pkAcctsBox">
         <summary><h2>Рахунки</h2><span class="note" id="pkAcctTotal"></span></summary>
         <div id="pkAccts"></div>
@@ -469,7 +476,7 @@ select.spr{font-size:.78rem;background:var(--surface-2);border:1px solid var(--l
     <div class="card">
       <div class="row" style="margin-bottom:12px">
         <div class="ctl" style="flex:1 1 220px"><label for="oSearch">Пошук</label><input id="oSearch" type="search" placeholder="нотатка, мітка, категорія" style="width:100%"></div>
-        <div class="ctl"><label for="oKind">Тип</label><select id="oKind"><option value="exp">витрати</option><option value="inc">доходи</option><option value="all">усі</option></select></div>
+        <div class="ctl"><label for="oKind">Тип</label><select id="oKind"><option value="exp">витрати</option><option value="inc">доходи</option><option value="all">усі</option><option value="tr">перекази</option></select></div>
         <div class="ctl"><label for="oGroup">Група</label><select id="oGroup"></select></div>
         <div class="ctl"><label for="oAcct">Рахунок</label><select id="oAcct"></select></div>
         <div class="ctl"><label for="oCur">Валюта</label><select id="oCur"></select></div>
@@ -885,6 +892,7 @@ function fillOpsSelectors(){
   $('#oCur').innerHTML = '<option value="">усі</option>' + D.curs.map(g=>`<option>${g}</option>`).join('');
 }
 function renderOps(){
+  if ($('#oKind').value==='tr'){ renderOpsTransfers(); return; }
   const q = $('#oSearch').value.trim().toLowerCase(), kind=$('#oKind').value, g=$('#oGroup').value, ac=$('#oAcct').value, cu=$('#oCur').value, mn=+$('#oMin').value||0;
   const rows = filtered(true).filter(t => (kind==='all' || (kind==='inc')===t.inc) && (!g||t.group===g) && (!ac||t.acct===ac) && (!cu||t.cur===cu) && V(t)>=mn &&
      (!q || (t.note+' '+t.tags.join(' ')+' '+t.name+' '+t.group+' '+t.acct).toLowerCase().includes(q))).reverse();
@@ -1245,7 +1253,7 @@ function renderAdvice(){
 
 /* ============ BACKUP ============ */
 let BKMETA = null;
-const BK_DOCS = ['budget/plan', 'pocket/config'], BK_COLLS = ['pocketTx', 'pocketFunds', 'spread'];
+const BK_DOCS = ['budget/plan', 'pocket/config'], BK_COLLS = ['pocketTx', 'pocketFunds', 'spread', 'recurring'];
 const isoOfDay = d => new Date(BASE + d*DAY).toISOString().slice(0,10);
 async function saveFile(filename, text){
   if (downloads){ try { await downloads.save({filename, data: text}); return true; } catch(e){ if (e && e.code==='declined') return false; if (!['unavailable','not_granted','capability_disabled','capability_removed'].includes(e && e.code)) throw e; } }
@@ -1372,6 +1380,97 @@ function wireSetup(){
     const doc = {...(PKCFG || {}), accounts, rates, startDate: (PKCFG && PKCFG.startDate) || t, firstMonth: (PKCFG && PKCFG.firstMonth) || t.slice(0,7)};
     try { await db.doc('pocket/config').set(doc); setupDraft = null; st.textContent = 'Збережено.'; } catch(err){ st.textContent = 'Не вдалося: ' + (err.message || err.code); }
   };
+}
+
+function renderOpsTransfers(){   // transfers between own accounts and balance corrections from the pocket
+  const q = $('#oSearch').value.trim().toLowerCase(), ac = $('#oAcct').value, cu = $('#oCur').value, mn = +$('#oMin').value || 0;
+  const [a, b] = periodRange();
+  const rows = PK.filter(o => (o.type==='tr' || o.type==='adj') && o.date).filter(o => { const ym = ymOf(dayOfISO(o.date)); return ym>=a && ym<=b; })
+    .filter(o => (!ac || o.account===ac || o.account2===ac) && (!cu || o.cur===cu || o.cur2===cu) && Math.abs(+o.amount)>=mn &&
+      (!q || [o.note, o.account, o.account2].join(' ').toLowerCase().includes(q)))
+    .sort((x, y) => (y.date + (y.createdAt||'')).localeCompare(x.date + (x.createdAt||'')));
+  const pl = n => n + ' ' + (n%10===1 && n%100!==11 ? 'переказ' : n%10>=2 && n%10<=4 && (n%100<10 || n%100>=20) ? 'перекази' : 'переказів');
+  $('#oSummary').textContent = pl(rows.length) + ' · перекази між своїми рахунками не входять у доходи й витрати';
+  let h = '<thead><tr><th>Дата</th><th>Звідки → куди</th><th>Нотатка</th><th class="n">Списано</th><th class="n">Надійшло</th></tr></thead><tbody>';
+  rows.slice(0, S.opsShown).forEach(o => {
+    const adj = o.type==='adj';
+    h += `<tr><td class="mono" style="white-space:nowrap">${o.date.split('-').reverse().join('.')}</td>
+      <td>${adj ? esc(o.account) + '<div class="muted" style="font-size:.78rem">виправлення залишку</div>' : esc(o.account) + ' → ' + esc(o.account2)}
+        ${adj ? '' : `<div><button class="linkbtn ops-edit" type="button" data-id="${o.id}">змінити</button></div>`}</td>
+      <td>${esc(o.note || '')}</td>
+      <td class="n">${adj ? '' : fmtN(+o.amount, 2) + '<span class="cur">' + o.cur + '</span>'}</td>
+      <td class="n">${adj ? (+o.amount>0?'+':'') + fmtN(+o.amount, 2) + '<span class="cur">' + o.cur + '</span>' : fmtN(+(o.amount2 ?? o.amount), 2) + '<span class="cur">' + (o.cur2 || o.cur) + '</span>'}</td></tr>`;
+  });
+  $('#tblOps').innerHTML = rows.length ? h + '</tbody>' : '<tbody><tr><td class="muted">Переказів за цей період немає.</td></tr></tbody>';
+  $('#tblOps').querySelectorAll('.ops-edit').forEach(btn => btn.onclick = () => pkEdit(btn.dataset.id));
+  $('#oMore').hidden = rows.length <= S.opsShown;
+}
+
+/* ============ RECURRING PAYMENTS ============ */
+// recurring/<id>: {name, account, amount, group, who, day, from:'YYYY-MM', skip:['YYYY-MM']}
+// each month, once its day has come, the pocket writes pocketTx/rec-<id>-<YYYY-MM> (fixed id: two phones never double it)
+let PKREC = [], pkTxLoaded = false, pkRecBusy = false, pkRecEditing = null;
+const daysIn = ym => new Date(Math.floor(ym/12), ym%12 + 1, 0).getDate();
+const recDate = (r, ym) => `${Math.floor(ym/12)}-${String(ym%12+1).padStart(2,'0')}-${String(Math.min(+r.day||1, daysIn(ym))).padStart(2,'0')}`;
+async function pkRunRecurring(){
+  if (!db || !pkTxLoaded || !PKCFG || pkRecBusy) return;
+  pkRecBusy = true;
+  try {
+    const today = todayISO();
+    for (const r of PKREC){
+      const acc = (PKCFG.accounts || []).find(a => a.name===r.account); if (!acc || !(+r.amount > 0)) continue;
+      for (let ym = ymOfKey(r.from || ymKey(nowYM())); ym <= nowYM(); ym++){
+        const key = ymKey(ym), date = recDate(r, ym);
+        if (date > today || (r.skip || []).includes(key) || PK.some(o => o.recurId===r.id && o.recurMonth===key)) continue;
+        await db.doc(`pocketTx/rec-${r.id}-${key}`).set({type:'exp', date, account:r.account, cur:acc.cur, amount:+r.amount, group:r.group, who:r.who || 'спільні',
+          tags:[], note:r.name || '', recurId:r.id, recurMonth:key, createdAt:new Date().toISOString()});
+      }
+    }
+  } catch(e){ showErr(e.message || e.code); }
+  pkRecBusy = false;
+}
+function renderRec(){
+  const box = $('#pkRec'); if (!box) return;
+  const k = budK(), tot = PKREC.reduce((s, r) => { const a = ((PKCFG && PKCFG.accounts) || []).find(x => x.name===r.account); return s + (a ? pkToDisp(+r.amount, a.cur) : 0); }, 0);
+  $('#pkRecTotal').textContent = PKREC.length ? `≈ ${fmt(tot)} на місяць` : '';
+  box.innerHTML = PKREC.length ? PKREC.slice().sort((a,b) => (+a.day||0) - (+b.day||0)).map(r => {
+      const a = ((PKCFG && PKCFG.accounts) || []).find(x => x.name===r.account), cur = a ? a.cur : '';
+      const ym = recDate(r, nowYM()) >= todayISO() ? nowYM() : nowYM() + 1;
+      return `<div class="pk-li"><div class="nm">${esc(r.name || r.group)}<small>${esc(r.group)} · ${esc(r.account)} · щомісяця ${+r.day}-го · наступний ${recDate(r, ym).split('-').reverse().join('.')}</small></div>
+        <div class="fig">${fmtN(+r.amount, 2)} ${cur}<small><button class="linkbtn rec-edit" type="button" data-id="${r.id}">змінити</button> · <button class="linkbtn rec-del" type="button" data-id="${r.id}">видалити</button></small></div></div>`; }).join('')
+    : '<p class="note">Поки немає. Додайте оренду, підписки, курси — «Кишенька» вноситиме їх сама в потрібний день.</p>';
+  box.querySelectorAll('.rec-edit').forEach(b => b.onclick = () => openRecForm(PKREC.find(r => r.id===b.dataset.id)));
+  box.querySelectorAll('.rec-del').forEach(b => b.onclick = async () => {
+    if (!b.dataset.armed){ b.dataset.armed = 1; b.textContent = 'точно видалити?'; setTimeout(() => { delete b.dataset.armed; b.textContent = 'видалити'; }, 4000); return; }
+    try { await db.doc('recurring/' + b.dataset.id).delete(); } catch(e){ showErr(e.message || e.code); } });
+}
+function openRecForm(r){
+  pkRecEditing = r || null; const f = $('#pkRecForm'), accs = ((PKCFG && PKCFG.accounts) || []).map(a => a.name), cats = pkCategories();
+  const v = r || {name:'', amount:'', account: lsGet('pkAcct') || accs[0], group: cats[0], who:'спільні', day: new Date().getDate()};
+  f.innerHTML = `<div class="pk-rec-form">
+    <label>Що це<input type="text" id="recName" value="${esc(v.name || '')}" placeholder="наприклад, курс з маркетингу" maxlength="60"></label>
+    <div class="row2"><label>Сума<input type="text" inputmode="decimal" id="recAmt" value="${v.amount}"></label>
+      <label>Число місяця<input type="text" inputmode="numeric" id="recDay" value="${v.day}"></label></div>
+    <label>Рахунок<select id="recAcct">${accs.map(a => `<option${a===v.account?' selected':''}>${esc(a)}</option>`).join('')}</select></label>
+    <div class="row2"><label>Категорія<select id="recCat">${cats.map(g => `<option${g===v.group?' selected':''}>${esc(g)}</option>`).join('')}</select></label>
+      <label>Чия<select id="recWho">${WHO.map(w => `<option value="${esc(w)}"${w===v.who?' selected':''}>${w==='спільні' ? 'спільна' : esc(w)}</option>`).join('')}</select></label></div>
+    <p class="note">Платіж вноситься сам цього дня місяця (якщо в місяці менше днів — в останній). Видалений вручну за якийсь місяць більше не з’явиться.</p>
+    <div class="row" style="gap:8px"><button class="btn primary" type="button" id="recSave">Зберегти</button><button class="btn" type="button" id="recCancel">Скасувати</button><span class="status-line" id="recMsg"></span></div></div>`;
+  f.hidden = false; $('#pkRecAdd').hidden = true; $('#pkRecBox').open = true; $('#recName').focus();
+  $('#recCancel').onclick = () => { f.hidden = true; f.innerHTML = ''; $('#pkRecAdd').hidden = false; };
+  $('#recSave').onclick = async () => {
+    const amount = Math.round((parseFloat($('#recAmt').value.replace(',', '.')) || 0)*100)/100, day = Math.min(31, Math.max(1, parseInt($('#recDay').value) || 1));
+    const doc = {name: $('#recName').value.trim(), amount, day, account: $('#recAcct').value, group: $('#recCat').value, who: $('#recWho').value,
+      from: pkRecEditing ? pkRecEditing.from : ymKey(nowYM()), skip: pkRecEditing ? (pkRecEditing.skip || []) : [], updatedAt: new Date().toISOString()};
+    if (!doc.name || !(amount > 0) || !doc.account){ $('#recMsg').textContent = 'Заповніть назву, суму й рахунок.'; return; }
+    try { if (pkRecEditing) await db.doc('recurring/' + pkRecEditing.id).set(doc); else await db.collection('recurring').add(doc);
+      f.hidden = true; f.innerHTML = ''; $('#pkRecAdd').hidden = false; } catch(e){ $('#recMsg').textContent = e.message || e.code; }
+  };
+}
+async function pkRecSkip(o){   // a recurring operation deleted by hand stays deleted for that month
+  const r = PKREC.find(x => x.id===o.recurId); if (!r) return;
+  const skip = [...new Set([...(r.skip || []), o.recurMonth])]; const {id, ...rest} = r;
+  await db.doc('recurring/' + r.id).set({...rest, skip});
 }
 
 /* ============ POCKET («Кишенька») ============ */
@@ -1594,6 +1693,7 @@ function renderPocket(){
     <div class="fig">${fmtN(a.bal,2)} ${a.cur}<small><button class="linkbtn pk-fix" type="button" data-acc="${esc(a.name)}">виправити залишок</button></small></div></div>`).join('');
   $('#pkAccts').querySelectorAll('.pk-fix').forEach(b => b.onclick = () => pkFixBalance(b.dataset.acc));
   $('#pkFunds').querySelectorAll('.pk-ffix').forEach(b => b.onclick = () => pkFixFund(b.dataset.g));
+  renderRec();
   // recent
   const R = PK.slice().sort((a,b)=> (b.date||'').localeCompare(a.date||'') || (b.createdAt||'').localeCompare(a.createdAt||'')).slice(0,30);
   $('#pkRecent').innerHTML = R.map(o => { const sign = o.type==='inc' || (o.type==='adj' && +o.amount>0) ? '+' : o.type==='tr' ? '' : '−';
@@ -1603,7 +1703,7 @@ function renderPocket(){
       <small class="acts">${o.type==='adj' ? '' : `<button class="linkbtn pk-edit" type="button" data-id="${o.id}">змінити</button> · `}<button class="linkbtn pk-del" type="button" data-id="${o.id}">видалити</button></small></div></div>`; }).join('') || '<p class="note">Тут з’являться операції, які ви внесете в «Кишеньку».</p>';
   $('#pkRecent').querySelectorAll('.pk-edit').forEach(b => b.onclick = () => pkEdit(b.dataset.id));
   $('#pkRecent').querySelectorAll('.pk-del').forEach(b => b.onclick = async () => {
-    if (b.dataset.armed){ try { await db.doc('pocketTx/'+b.dataset.id).delete(); } catch(e){ showErr(e.message||e.code); } }
+    if (b.dataset.armed){ try { const o = PK.find(x => x.id===b.dataset.id); if (o && o.recurId) await pkRecSkip(o); await db.doc('pocketTx/'+b.dataset.id).delete(); } catch(e){ showErr(e.message||e.code); } }
     else { b.dataset.armed = '1'; b.textContent = 'точно видалити?'; b.style.color = 'var(--crit)'; setTimeout(()=>{ delete b.dataset.armed; b.textContent='видалити'; b.style.color=''; }, 4000); } });
 }
 function pkEdit(id){
@@ -1766,6 +1866,7 @@ async function pkSave(e){
   $('#pkSave').disabled = false;
 }
 function wirePocket(){
+  $('#pkRecAdd').onclick = () => openRecForm(null);
   $('#pkPrev').onclick = () => { pkMonthYM = (pkMonthYM ?? nowYM()) - 1; render(); };
   $('#pkNext').onclick = () => { pkMonthYM = Math.min(nowYM(), (pkMonthYM ?? nowYM()) + 1); if (pkMonthYM===nowYM()) pkMonthYM = null; render(); };
   $('#pkAdd').onclick = () => pkOpen('exp'); $('#pkAddInc').onclick = () => pkOpen('inc'); $('#pkAddTr').onclick = () => pkOpen('tr');
@@ -1892,9 +1993,10 @@ async function connectCaps(){
     if (currentTab()==='pocket') render();
   }, () => {});
   db.collection('pocketTx').onSnapshot(snap => {
-    PK = snap.docs.map(d => ({id:d.id, ...d.data()}));
-    if (D){ decode(D); fillOpsSelectors(); } render();
+    PK = snap.docs.map(d => ({id:d.id, ...d.data()})); pkTxLoaded = true;
+    if (D){ decode(D); fillOpsSelectors(); } render(); pkRunRecurring();
   }, () => {});
+  db.collection('recurring').onSnapshot(snap => { PKREC = snap.docs.map(d => ({id:d.id, ...d.data()})); if (currentTab()==='pocket') render(); pkRunRecurring(); }, () => {});
   db.collection('spread').onSnapshot(snap => {
     SPREAD = {}; snap.docs.forEach(d => { const v = d.data(); if (v && v.months>1) SPREAD[d.id] = v.months; });
     if (D){ buildView(); render(); }
