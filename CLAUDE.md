@@ -29,6 +29,7 @@
 | `pocketFunds/*` | розкладання (`YYYY-MM`), закриття місяців (`close-YYYY-MM`), виправлення (`adj-*`): `{funds:{group:usd}, savings:usd}` |
 | `spread/*` | на скільки місяців розмазати операцію |
 | `recurring/*` | регулярні платежі `{name, account, amount, group, who, day, from, skip[]}`; «Кишенька» сама пише `pocketTx/rec-<id>-<YYYY-MM>` (`pkRunRecurring`) |
+| `budgetAdj/<YYYY-MM>` | перекидання між категоріями на місяць `{moves:[{from, to, usd}]}`; `w:<хто>` — забаганки людини (`adjFor`) |
 | `meta/backup` | дата останньої резервної копії |
 
 Суми бюджету й фондів зберігаються в USD і показуються в USD або EUR (`budK()`). Історія — лише операції «Кишеньки» (`emptyDataset()` + `pocketRows()`).
