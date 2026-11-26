@@ -1625,15 +1625,16 @@ function pkPendingClose(){
   return null;
 }
 // monthly put-aside for a fund in month ym; a one-off goal (no `every`) stops once it is collected
-function fundMonthUSD(g, ym){
+function fundMonthUSD(g, ym, forPlan){
   const v = +((budget && budget.groups || {})[g]) || 0, G0 = goalOf(g);
+  const key = ymKey(ym), done = PKALLOC[key]; if (done && done.funds && !forPlan) return +done.funds[g] || 0;   // already put aside: what really went in
   if (!G0 || +G0.every > 0) return v;
-  const key = ymKey(ym), saved = Object.entries(PKALLOC).filter(([k]) => k !== key).reduce((s,[,a]) => s + (+((a.funds||{})[g])||0), 0);
+  const saved = Object.entries(PKALLOC).filter(([k]) => k !== key).reduce((s,[,a]) => s + (+((a.funds||{})[g])||0), 0);
   return Math.max(0, Math.min(v, Math.round((+G0.target - saved)*100)/100));
 }
 function pkPlanAlloc(){
   const G = budget && budget.groups ? budget.groups : {};
-  const funds = Object.fromEntries(Object.entries(G).filter(([g,v]) => roleOf(g)==='fund' && +v>0).map(([g]) => [g, fundMonthUSD(g, nowYM())]).filter(([,v]) => v > 0));
+  const funds = Object.fromEntries(Object.entries(G).filter(([g,v]) => roleOf(g)==='fund' && +v>0).map(([g]) => [g, fundMonthUSD(g, nowYM(), true)]).filter(([,v]) => v > 0));
   const sp = cushSplit(+(budget && budget.savings) || 0), c = cushCfg();
   if (sp.over > 0) funds[c.overflow] = (funds[c.overflow]||0) + sp.over;
   return {funds, savings: sp.cush};
