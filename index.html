@@ -904,7 +904,7 @@ function renderOps(){
 
 function spreadSel(t){
   const n = spreadOf(t), k = txKey(t);
-  return `<select class="spr" data-k="${k}" aria-label="На скільки місяців розподілити">${[1,2,3,4,5,6,9,12].map(m=>`<option value="${m}" ${m===n?'selected':''}>${m} міс</option>`).join('')}</select>`;
+  return `<select class="spr" data-k="${k}" aria-label="На скільки місяців розподілити">${[...new Set([1,2,3,4,5,6,9,12,18,24,n])].sort((x,y)=>x-y).map(m=>`<option value="${m}" ${m===n?'selected':''}>${m} міс</option>`).join('')}</select>`;
 }
 async function setSpread(k, n){
   if (n<=1) delete SPREAD[k]; else SPREAD[k] = n;
