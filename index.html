@@ -1823,7 +1823,7 @@ function opsList(rows, showGroup){
   if (!rows.length) return '<p class="note">Операцій немає.</p>';
   return rows.slice().sort((a,b) => b.day - a.day).map(t => {
     const tags = (t.tags||[]).filter(x => !WHO.includes(x)), w = txWho(t);
-    const nm = showGroup ? t.group : (t.note || tags.join(', ') || t.group);
+    const nm = showGroup ? t.group : (t.note || tags.join(', ') || t.acct || t.group);
     const small = [isoOfDay(t.day).split('-').reverse().slice(0,2).join('.'), w!==WHO[0] ? esc(w) : null,
       showGroup ? [t.note, tags.join(', ')].filter(Boolean).map(esc).join(' · ') || null : (t.note && tags.length ? esc(tags.join(', ')) : null),
       t.parts ? `частина ${t.part}/${t.parts}` : null, t.pkId ? null : 'з історії'].filter(Boolean).join(' · ');
@@ -1832,7 +1832,10 @@ function opsList(rows, showGroup){
 }
 function catPanel(g, ym){
   const rows = TXV.filter(t => !t.inc && t.ym===ym && t.group===g);
-  let ps = sliceParts(rows, tagOf); if (ps.length < 2) ps = sliceParts(rows, t => whoLabel(txWho(t)));
+  // split by tags; if most of it has no tag, by who; then by account — whichever actually tells something
+  const noTag = tagOf({tags:[]}), tot = rows.reduce((s,t) => s + V(t), 0) || 1;
+  const ok = ps => ps.length >= 2 && ps[0].v/tot < 0.85 && (ps.find(x => x.name===noTag)?.v || 0)/tot < 0.5;
+  const ps = [sliceParts(rows, tagOf), sliceParts(rows, t => whoLabel(txWho(t))), sliceParts(rows, t => t.acct || '—')].find(ok) || [];
   return `<div class="pk-open">${slicePie(ps)}${opsList(rows, false)}</div>`;
 }
 let pkWantOpen = null;
