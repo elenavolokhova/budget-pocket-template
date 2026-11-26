@@ -1553,6 +1553,8 @@ function pkStartDay(){ return PKCFG && PKCFG.startDate ? dayOfISO(PKCFG.startDat
 function pkStartYM(){ // month the limits and funds start counting from
   if (PKCFG && PKCFG.firstMonth){ const [y,m] = PKCFG.firstMonth.split('-').map(Number); return y*12+m-1; }
   const d = new Date(BASE + (pkStartDay()+1)*DAY); return d.getUTCFullYear()*12 + d.getUTCMonth(); }
+// wants, funds and the month card count the whole first month (from the 1st), even if the ledger started mid-month
+function pkCountDay(){ const y0 = pkStartYM(); return dayOfISO(Math.floor(y0/12) + '-' + String(y0%12+1).padStart(2,'0') + '-01') - 1; }
 function nowYM(){ const n = new Date(); return n.getFullYear()*12 + n.getMonth(); }
 function pkAccountBalances(){
   const acc = (PKCFG && PKCFG.accounts) || [];
@@ -1569,7 +1571,7 @@ function pkAccountBalances(){
 function pkToDisp(amount, cur){ const day = dayOfISO(todayISO()); const v = pkConv(amount, cur, day); return S.cur==='EUR' ? v.eur : v.usd; }
 function pkCushion(){ return pkAccountBalances().reduce((s,a)=>s+pkToDisp(a.bal, a.cur),0); }
 function pkWants(){
-  const k = budK(), sd = pkStartDay(), y0 = pkStartYM(), months = Math.max(0, nowYM() - y0 + 1);
+  const k = budK(), sd = pkCountDay(), y0 = pkStartYM(), months = Math.max(0, nowYM() - y0 + 1);
   const spentAll = {}, spentMonth = {}; WHO.forEach(w => { spentAll[w] = 0; spentMonth[w] = 0; });
   TX.forEach(t => { if (t.inc || t.day <= sd || t.ym < y0 || roleOf(t.group)!=='want') return;
     const w = t.who && WHO.includes(t.who) ? t.who : 'спільні'; spentAll[w] += V(t); if (t.ym===nowYM()) spentMonth[w] += V(t); });
@@ -1581,7 +1583,7 @@ let PKALLOC = {};   // 'YYYY-MM' -> {funds:{group:usd}, savings:usd, at}
 const ymKey = ym => Math.floor(ym/12) + '-' + String(ym%12+1).padStart(2,'0');
 function pkFunds(){
   // a fund holds what was put aside with the monthly button, minus what was spent from its category since the start
-  const k = budK(), sd = pkStartDay(), G = budget && budget.groups ? budget.groups : {};
+  const k = budK(), sd = pkCountDay(), G = budget && budget.groups ? budget.groups : {};
   const groups = [...new Set([...Object.keys(G).filter(g => roleOf(g)==='fund' && +G[g] > 0), ...Object.values(PKALLOC).flatMap(a => Object.keys(a.funds||{}))])];
   return groups.map(g => { let saved = 0, spent = 0;
     Object.values(PKALLOC).forEach(a => saved += (+((a.funds||{})[g])||0)*k);
@@ -1862,7 +1864,7 @@ function renderPkMonth(paceNow){
     .filter(g => roleOf(g) !== 'fund')   // funds live in their own list below — one row each
     .sort((a,b) => order[roleOf(a)] - order[roleOf(b)] || (+G[b]||0) - (+G[a]||0));
   // real payments from funds this month (not the smoothed share of an earlier tax payment)
-  const fundSpent = TX.filter(t => !t.inc && t.ym===ym && roleOf(t.group)==='fund' && t.day > pkStartDay()).reduce((s,t) => s+V(t), 0);
+  const fundSpent = TX.filter(t => !t.inc && t.ym===ym && roleOf(t.group)==='fund' && t.day > pkCountDay()).reduce((s,t) => s+V(t), 0);
   let lastRole = null, h = '';
   groups.forEach(g => {
     const role = roleOf(g);
