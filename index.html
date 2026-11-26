@@ -994,7 +994,9 @@ function renderBudget(){
   const kB = budK(); const B = has ? Object.fromEntries(Object.entries(budView()).map(([g,v])=>[g,(+v||0)*kB])) : {};
   const totB = Object.values(B).reduce((s,v)=>s+(+v||0),0);
   const totS = Object.values(spent).reduce((s,v)=>s+v,0);
-  const left = totB - totS;
+  const isFund = g => wantOfKey(g)==null && roleOf(g)==='fund';
+  const fundLeft = Object.keys({...B, ...spent}).filter(isFund).reduce((s,g) => s + (+B[g]||0) - (spent[g]||0), 0);
+  const left = totB - totS - fundLeft;   // funds are already put aside, they are not money to spend this month
   if (has){
     const st = totS > totB ? [overSev(totS,totB,false)==='soft' ? 'warn' : 'crit','Перевитрата'] : totS > totB*pace*1.05 && pace<1 ? ['warn','Витрачаємо швидше за план'] : ['good', pace<1 ? 'Ідемо за планом' : 'Вклалися'];
     $('#budStatus').innerHTML = `<span class="pill ${st[0]}">${st[1]}</span>`;
@@ -1002,7 +1004,7 @@ function renderBudget(){
     $('#budSum').innerHTML = `
       <div><div class="eyebrow">Бюджет витрат</div><div class="v">${fmt(totB)}</div></div>
       <div><div class="eyebrow">Витрачено</div><div class="v">${fmt(totS)}</div></div>
-      <div><div class="eyebrow">${left>=0?'Можна ще витратити':'Перевитрата'}</div><div class="v" style="color:var(${left>=0?'--good':'--warn'})">${fmt(Math.abs(left))}</div></div>
+      <div><div class="eyebrow">${left>=0?'Можна ще витратити':'Перевитрата'}</div><div class="v" style="color:var(${left>=0?'--good':'--warn'})">${fmt(Math.abs(left))}</div>${fundLeft>0.5 ? `<div class="note">звичайні витрати й забаганки · ще ${fmt(fundLeft)} лежить у фондах</div>` : '<div class="note">звичайні витрати й забаганки</div>'}</div>
       <div><div class="eyebrow">Відкладаємо</div><div class="v">${fmt(sav)}</div><div class="note">${inc? fmtN(sav/inc*100,0)+'% від доходу '+fmt(inc):''}</div></div>`;
     $('#budTotal').innerHTML = barRow({g:null, name:'Усі витрати місяця', b:totB, s:totS, pace, total:true});
     const now = new Date(), daysLeft = new Date(now.getFullYear(), now.getMonth()+1, 0).getDate() - now.getDate() + 1;
