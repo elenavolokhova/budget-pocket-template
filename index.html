@@ -1918,26 +1918,32 @@ function renderPkMonth(paceNow){
     .sort((a,b) => order[roleOf(a)] - order[roleOf(b)] || (+G[b]||0) - (+G[a]||0));
   // real payments from funds this month (not the smoothed share of an earlier tax payment)
   const fundSpent = TX.filter(t => !t.inc && t.ym===ym && roleOf(t.group)==='fund' && t.day > pkCountDay()).reduce((s,t) => s+V(t), 0);
-  const wantSp = groups.filter(g => roleOf(g)==='want').reduce((s,g) => s + (spent[g]||0), 0);
   const tap = g => ({cls: 'tap' + (pkCatOpen===g ? ' open' : ''), attrs: ` data-cat="${esc(g)}"`});
   const panel = g => pkCatOpen===g ? catPanel(g, ym) : '';
-  let lastRole = null, h = '';
-  groups.forEach(g => {
-    const role = roleOf(g);
+  let h = '';
+  groups.filter(g => roleOf(g)==='regular').forEach((g, n) => {
+    if (!n) h += `<div class="pk-sec">Звичайні витрати</div>`;
     const sp = spent[g]||0;
-    if (role==='want' && sp < 0.5) return;
-    if (role !== lastRole){ h += `<div class="pk-sec">${role==='want' ? 'Забаганки <span class="pk-sec-hint">· ліміти по людях — у кільцях угорі</span>' : role==='regular'?'Звичайні витрати':'Забаганки'}</div>`; lastRole = role; }
-    if (role==='want'){   // wants have per-person limits (the rings), so categories show spending and who spent it
-      const by = {}; TX.forEach(t => { if (!t.inc && t.ym===ym && t.group===g){ const w = t.who || 'спільні'; by[w] = (by[w]||0) + V(t); } });
-      h += barRow({...tap(g), name: esc(g), right: `<small>витрачено</small>${fmt(sp)}`, pct: wantSp ? sp/wantSp*100 : 0, fill: 'want', atLabel: wantSp ? fmtN(sp/wantSp*100,0) + '%' : null, endLabel: 'від усіх забаганок', sub: Object.entries(by).filter(([,v]) => v >= 0.5).map(([w,v]) => `${w==='спільні'?'спільні':esc(w)} ${fmt(v)}`).join(' · ')}) + panel(g);
-      return;
-    }
     const b = ((+G[g]||0) + (adj.groups[g]||0))*kB, r = b - sp;
     const sev = overSev(sp, b, totS <= totB), ahead = b && sp > b*pace*1.1 && pace < 1;
     const right = !b ? '' : r >= 0 ? `<small>${ym===cur?'лишилося':'не витрачено'}</small>${fmt(r)}` : `<small>понад</small>${fmt(-r)}`;
     h += barRow({...tap(g), name: esc(g), right, rtColor: r < 0 ? sevColor(sev) : '--ink', pct: b ? sp/b*100 : (sp ? 100 : 0), fill: sev || (ahead ? 'soft' : ''),
       atLabel: sp >= 0.5 ? fmt(sp) : null, endLabel: b ? fmt(b) : null, pace: ym===cur && b && pace < 1 ? pace*100 : null,
       sub: ym!==cur && avg[g] ? `зазвичай ${fmt(avg[g])}` : ''}) + panel(g);
+  });
+  // wants: one row per person, like the categories above; what they went on is inside (donut + list)
+  const wRows = TX.filter(t => !t.inc && t.ym===ym && t.day > pkCountDay() && roleOf(t.group)==='want');
+  const wk = WHO.map(w => { const x = Wn.find(z => z.w===w) || {}, rows = wRows.filter(t => txWho(t)===w), sp = rows.reduce((s,t) => s + V(t), 0);
+    const lim = ((allowOf(w)||0) + (adj.wants[w]||0))*kB, avail = ym===cur && x.avail!=null ? x.avail : lim - sp;
+    return {w, rows, sp, avail, carry: ym===cur ? (x.carry||0) : 0}; }).filter(x => x.sp >= 0.5 || allowOf(x.w));
+  wk.forEach((x, n) => {
+    if (!n) h += `<div class="pk-sec">Забаганки</div>`;
+    const key = 'w:' + x.w, tot = Math.max(0, x.sp + x.avail), r = x.avail, nm = whoLabel(x.w);
+    h += barRow({...tap(key), name: esc(nm[0].toUpperCase() + nm.slice(1)), right: r >= 0 ? `<small>${ym===cur ? 'лишилося' : 'не витрачено'}</small>${fmt(r)}` : `<small>понад</small>${fmt(-r)}`,
+      rtColor: r < 0 ? '--crit' : '--ink', pct: tot ? x.sp/tot*100 : (x.sp ? 100 : 0), fill: r < 0 ? 'crit' : '',
+      atLabel: x.sp >= 0.5 ? fmt(x.sp) : null, endLabel: tot ? fmt(tot) : null, pace: ym===cur && tot && pace < 1 ? pace*100 : null,
+      sub: Math.abs(x.carry) >= 1 ? `${x.carry > 0 ? '+' : '−'}${fmt(Math.abs(x.carry))} з минулих міс.` : ''})
+      + (pkCatOpen===key ? `<div class="pk-open">${x.rows.length ? slicePie(sliceParts(x.rows, t => t.group)) + opsList(x.rows, true) : '<p class="note">Цього місяця ще нічого.</p>'}</div>` : '');
   });
   if (fundSpent > 0.5) h += `<p class="note" style="margin:10px 0 0">Ще ${fmt(fundSpent)} витрачено з фондів — по кожному фонду дивіться у «Фондах».</p>`;
   const box = $('#pkMonth'); box.innerHTML = h || '<p class="note">Цього місяця операцій немає.</p>';
