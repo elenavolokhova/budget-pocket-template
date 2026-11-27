@@ -188,7 +188,7 @@ section.pk{max-width:560px;margin:0 auto;padding-bottom:84px}
 .pk-pie li b{font-weight:500;font-family:var(--f-mono);font-variant-numeric:tabular-nums}
 .pk-pie li .am{color:var(--muted);font-family:var(--f-mono);font-size:.76rem;text-align:right;font-variant-numeric:tabular-nums}
 .pkb .bar .fill.want{background:var(--s2)}
-.pk-billhead{cursor:pointer;display:flex;align-items:baseline;gap:6px;margin-top:18px}.pk-billhead .chev{margin-left:auto;color:var(--muted)}
+.pk-billhead .nm{font-weight:400;color:var(--ink-2)}.pk-billrows{padding-left:12px;border-left:2px solid var(--line);margin:0 0 8px}
 .pk-allocdone .note{margin:0 0 10px}
 .bill-st{display:inline-block;width:1.2em;color:var(--muted)}.bill-st.ok{color:var(--good)}
 .pkb .sub{font-size:.76rem;color:var(--muted);margin-top:3px;line-height:1.45}
@@ -1949,17 +1949,22 @@ function renderPkMonth(paceNow){
       const done = sp >= 0.5 && !pend.length, waitAmt = sp >= 0.5 ? pendAmt : Math.max(b, pendAmt);
       paidSum += sp; waitSum += waitAmt;
       const sub = [b ? `бюджет ${fmt(b)}` : null, ...pend.map(r => `чекає ${esc(r.name || g)} ${dm(recDate(r, ym))} · ${fmt(recAmt(r))}`)].filter(Boolean).join(' · ');
-      rows += barRow({...tap(g), name: `<span class="bill-st${done ? ' ok' : ''}">${done ? '✓' : '○'}</span>${esc(g)}`, noBar: true,
+      const cap = Math.max(b, sp + pendAmt);
+      rows += barRow({...tap(g), name: `<span class="bill-st${done ? ' ok' : ''}">${done ? '✓' : '○'}</span>${esc(g)}`, pct: cap ? sp/cap*100 : 0, fill: b && sp > b + 0.5 ? 'crit' : '',
+        atLabel: sp >= 0.5 && cap ? fmtN(sp/cap*100, 0) + '%' : null, endLabel: cap ? fmt(cap) : null,
         right: sp >= 0.5 ? `<small>сплачено</small>${fmt(sp)}` : `<small>чекає</small>${fmt(waitAmt)}`, rtColor: b && sp > b + 0.5 ? '--crit' : '--ink', sub}) + panel(g);
     });
     recs.filter(r => !isBill(r.group)).sort((a,b) => (+a.day||0) - (+b.day||0)).forEach(r => {
       const o = recPaid(r), v = o ? pkToDisp(+o.amount, o.cur) : recAmt(r), n = recLeft(r, ym);
       if (o) paidSum += v; else waitSum += v;
-      rows += barRow({name: `<span class="bill-st${o ? ' ok' : ''}">${o ? '✓' : '○'}</span>${esc(r.name || r.group)}`, noBar: true,
+      rows += barRow({name: `<span class="bill-st${o ? ' ok' : ''}">${o ? '✓' : '○'}</span>${esc(r.name || r.group)}`, pct: o ? 100 : 0, endLabel: fmt(v),
         right: `<small>${o ? 'сплачено' : 'чекає'}</small>${fmt(v)}`,
         sub: [esc(r.group), `${o ? 'сплачено' : 'чекає'} ${dm(o ? o.date : recDate(r, ym))}`, n != null ? `лишилося платежів: ${n - (o ? 1 : 0)}` : null].filter(Boolean).join(' · ')});
     });
-    if (rows) billsH = `<div class="pk-sec pk-billhead" role="button" tabindex="0" aria-expanded="${pkBillsOpen}">Обов’язкові платежі <span class="pk-sec-hint">· ${waitSum >= 0.5 ? 'сплачено ' + fmt(paidSum) + ' · чекає ' + fmt(waitSum) : 'усе сплачено ' + fmt(paidSum)}</span><span class="chev">${pkBillsOpen ? '▾' : '▸'}</span></div>` + (pkBillsOpen ? rows : '');
+    if (rows){ const all = paidSum + waitSum;
+      billsH = `<div class="pk-sec">Обов’язкові платежі</div>` + barRow({cls: 'tap pk-billhead' + (pkBillsOpen ? ' open' : ''), attrs: ` role="button" tabindex="0" aria-expanded="${pkBillsOpen}"`,
+        name: 'усі платежі місяця', right: waitSum >= 0.5 ? `<small>чекає</small>${fmt(waitSum)}` : `<small>усе сплачено</small>`, pct: all ? paidSum/all*100 : 0,
+        atLabel: paidSum >= 0.5 ? fmt(paidSum) : null, endLabel: fmt(all)}) + (pkBillsOpen ? `<div class="pk-billrows">${rows}</div>` : ''); }
   }
   groups.filter(g => roleOf(g)==='regular' && !isBill(g)).forEach((g, n) => {
     if (!n) h += `<div class="pk-sec">Звичайні витрати</div>`;
@@ -1970,20 +1975,6 @@ function renderPkMonth(paceNow){
     h += barRow({...tap(g), name: esc(g), right, rtColor: r < 0 ? sevColor(sev) : '--ink', pct: b ? sp/b*100 : (sp ? 100 : 0), fill: sev || (ahead ? 'soft' : ''),
       atLabel: sp >= 0.5 ? fmt(sp) : null, endLabel: b ? fmt(b) : null, pace: ym===cur && b && pace < 1 ? pace*100 : null,
       sub: ym!==cur && avg[g] ? `зазвичай ${fmt(avg[g])}` : ''}) + panel(g);
-  });
-  // wants: one row per person, like the categories above; what they went on is inside (donut + list)
-  const wRows = TX.filter(t => !t.inc && t.ym===ym && t.day > pkCountDay() && roleOf(t.group)==='want');
-  const wk = WHO.map(w => { const x = Wn.find(z => z.w===w) || {}, rows = wRows.filter(t => txWho(t)===w), sp = rows.reduce((s,t) => s + V(t), 0);
-    const lim = ((allowOf(w)||0) + (adj.wants[w]||0))*kB, avail = ym===cur && x.avail!=null ? x.avail : lim - sp;
-    return {w, rows, sp, avail, carry: ym===cur ? (x.carry||0) : 0}; }).filter(x => x.sp >= 0.5 || allowOf(x.w));
-  wk.forEach((x, n) => {
-    if (!n) h += `<div class="pk-sec">Забаганки</div>`;
-    const key = 'w:' + x.w, tot = Math.max(0, x.sp + x.avail), r = x.avail, nm = whoLabel(x.w);
-    h += barRow({...tap(key), name: esc(nm[0].toUpperCase() + nm.slice(1)), right: r >= 0 ? `<small>${ym===cur ? 'лишилося' : 'не витрачено'}</small>${fmt(r)}` : `<small>понад</small>${fmt(-r)}`,
-      rtColor: r < 0 ? '--crit' : '--ink', pct: tot ? x.sp/tot*100 : (x.sp ? 100 : 0), fill: r < 0 ? 'crit' : '',
-      atLabel: x.sp >= 0.5 ? fmt(x.sp) : null, endLabel: tot ? fmt(tot) : null, pace: ym===cur && tot && pace < 1 ? pace*100 : null,
-      sub: Math.abs(x.carry) >= 1 ? `${x.carry > 0 ? '+' : '−'}${fmt(Math.abs(x.carry))} з минулих міс.` : ''})
-      + (pkCatOpen===key ? `<div class="pk-open">${x.rows.length ? slicePie(sliceParts(x.rows, t => t.group)) + opsList(x.rows, true) : '<p class="note">Цього місяця ще нічого.</p>'}</div>` : '');
   });
   h += billsH;
   if (fundSpent > 0.5) h += `<p class="note" style="margin:10px 0 0">Ще ${fmt(fundSpent)} витрачено з фондів — по кожному фонду дивіться у «Фондах».</p>`;
