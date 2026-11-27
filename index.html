@@ -1736,11 +1736,20 @@ function renderPocket(){
   if (!db){ $('#pkOff').hidden = false; $('#pkMain').hidden = true;
     $('#pkOff').innerHTML = '<h2>«Кишенька» недоступна</h2><p>Для спільних даних на двох потрібен вхід у claude.ai і доступ до цієї сторінки з правом редагування. Відкрийте сторінку зі свого акаунта.</p>'; return; }
   $('#pkOff').hidden = true; $('#pkMain').hidden = false;
-  if (!PKCFG){ $('#pkWants').hidden = false; $('#pkWants').innerHTML = '<p class="note">Завантажую «Кишеньку»…</p>'; return; }
+  if (!PKCFG){ $('#pkWants').innerHTML = '<p class="note">Завантажую «Кишеньку»…</p>'; return; }
   const now = new Date(), dim = new Date(now.getFullYear(), now.getMonth()+1, 0).getDate(), daysLeft = dim - now.getDate() + 1, weeksLeft = Math.max(1, daysLeft/7), paceNow = now.getDate()/dim;
   // wants
-  const W = pkWants(); pkWantOpen = null;   // wants live in the month card (one row per person)
-  $('#pkWants').innerHTML = ''; $('#pkWants').hidden = true;
+  const W = pkWants(), C = 2*Math.PI*26;
+  const ring = (pct, cls) => `<svg viewBox="0 0 64 64" class="ring" aria-hidden="true"><circle cx="32" cy="32" r="26" class="tr"/>${pct > 0.5 ? `<circle cx="32" cy="32" r="26" class="ar ${cls}" stroke-dasharray="${(Math.min(100,Math.max(0,pct))/100*C).toFixed(1)} ${C.toFixed(1)}" transform="rotate(-90 32 32)"/>` : ''}</svg>`;
+  $('#pkWants').innerHTML = W.map(x => {
+    const name = x.w==='спільні' ? 'Спільні' : esc(x.w);
+    if (x.months===0) return `<button type="button" class="pk-w" data-w="${esc(x.w)}"><span class="who">${name}</span><span class="v">${fmt(x.lim)}</span><small>на місяць</small></button>`;
+    const total = x.spentMonth + x.avail, pct = total > 0 ? x.spentMonth/total*100 : 100, neg = x.avail < -0.5;   // total = what was there at the start of the month
+    return `<button type="button" class="pk-w" data-w="${esc(x.w)}" aria-pressed="${pkWantOpen===x.w}" aria-label="забаганки: ${name}">
+      <span class="who">${name}</span>
+      <span class="ringbox">${ring(neg ? 100 : pct, neg ? 'neg' : pct > 85 ? 'warn' : '')}<span class="rv ${neg?'neg':''}">${fmt(x.avail)}</span></span>
+      <small>витрачено ${fmt(x.spentMonth)} з ${fmt(total)}</small></button>`; }).join('');
+  $('#pkWants').querySelectorAll('.pk-w').forEach(b => b.onclick = () => { pkWantOpen = pkWantOpen===b.dataset.w ? null : b.dataset.w; renderPocket(); });
   renderWantList(W);
   const notYet = W[0] && W[0].months===0;
   $('#pkWantsNote').textContent = notYet ? `Ліміти забаганок і фонди почнуть накопичуватися з ${ymLong(pkStartYM())}. Витрати можна вносити вже зараз.` : '';
@@ -1974,7 +1983,7 @@ function renderPkMonth(paceNow){
       rtColor: r < 0 ? '--crit' : '--ink', pct: tot ? x.sp/tot*100 : (x.sp ? 100 : 0), fill: r < 0 ? 'crit' : '',
       atLabel: x.sp >= 0.5 ? fmt(x.sp) : null, endLabel: tot ? fmt(tot) : null, pace: ym===cur && tot && pace < 1 ? pace*100 : null,
       sub: Math.abs(x.carry) >= 1 ? `${x.carry > 0 ? '+' : '−'}${fmt(Math.abs(x.carry))} з минулих міс.` : ''})
-      + (pkCatOpen===key ? `<div class="pk-open">${ym===cur ? `<div class="row" style="justify-content:flex-end;margin:0 0 6px"><button class="btn primary wl-spend" type="button" data-w="${esc(x.w)}">+ витратити</button></div>` : ''}${x.rows.length ? slicePie(sliceParts(x.rows, t => t.group)) + opsList(x.rows, true) : '<p class="note">Цього місяця ще нічого.</p>'}</div>` : '');
+      + (pkCatOpen===key ? `<div class="pk-open">${x.rows.length ? slicePie(sliceParts(x.rows, t => t.group)) + opsList(x.rows, true) : '<p class="note">Цього місяця ще нічого.</p>'}</div>` : '');
   });
   h += billsH;
   if (fundSpent > 0.5) h += `<p class="note" style="margin:10px 0 0">Ще ${fmt(fundSpent)} витрачено з фондів — по кожному фонду дивіться у «Фондах».</p>`;
@@ -1983,7 +1992,6 @@ function renderPkMonth(paceNow){
   box.querySelectorAll('.wl-edit').forEach(b => b.onclick = e => { e.stopPropagation(); pkEdit(b.dataset.id); });
   const bh = box.querySelector('.pk-billhead'); if (bh) bh.onclick = bh.onkeydown = e => { if (e.type==='keydown' && e.key!=='Enter' && e.key!==' ') return; e.preventDefault();
     pkBillsOpen = !pkBillsOpen; lsSet('pkBillsOpen', pkBillsOpen); renderPkMonth(paceNow); };
-  box.querySelectorAll('.wl-spend').forEach(b => b.onclick = () => pkOpen('exp', {who: b.dataset.w, want: true}));
   box.querySelectorAll('.bill-tgl').forEach(b => b.onclick = async () => { const g = b.dataset.g, cur = (budget && budget.bills) || PK_BILL_DEFAULT;
     await saveBudgetPatch({bills: cur.includes(g) ? cur.filter(x => x!==g) : [...cur, g]}); renderPkMonth(paceNow); });
 }
