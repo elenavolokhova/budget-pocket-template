@@ -191,6 +191,8 @@ section.pk{max-width:560px;margin:0 auto;padding-bottom:84px}
 .pk-billhead .nm{font-weight:400;color:var(--ink-2)}.pk-billrows{padding-left:12px;border-left:2px solid var(--line);margin:0 0 8px}
 .pk-allocdone .note{margin:0 0 10px}
 .bill-st{display:inline-block;width:1.2em;color:var(--muted)}.bill-st.ok{color:var(--good)}
+.op-tr td{color:var(--ink-2)}
+.pk-quiet{margin-top:6px}.pk-quiet summary{cursor:pointer;font-size:.84rem;color:var(--muted);padding:8px 0}
 .pkb .sub{font-size:.76rem;color:var(--muted);margin-top:3px;line-height:1.45}
 .pk-w{justify-items:center;text-align:center}
 .pk-w[aria-pressed=true]{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
@@ -939,9 +941,23 @@ function renderOps(){
   const rows = filtered(true).filter(t => (kind==='all' || (kind==='inc')===t.inc) && (!g||t.group===g) && (!ac||t.acct===ac) && (!cu||t.cur===cu) && V(t)>=mn &&
      (!q || (t.note+' '+t.tags.join(' ')+' '+t.name+' '+t.group+' '+t.acct).toLowerCase().includes(q))).reverse();
   const sum = rows.reduce((s,t)=>s+(t.inc?V(t):-V(t)),0);
-  $('#oSummary').textContent = `${OPS(rows.length)} · разом ${fmt(sum)}` + (kind==='exp'?' (витрати зі знаком мінус)':'');
+  let nTr = 0;
+  if (kind==='all' && !g){   // transfers between own accounts are part of «все», but not of the totals
+    const [pa, pb] = periodRange();
+    const trs = PK.filter(o => (o.type==='tr' || o.type==='adj') && o.date).map(o => ({tr:true, o, day: dayOfISO(o.date)}))
+      .filter(x => { const ym = ymOf(x.day); return ym>=pa && ym<=pb; })
+      .filter(({o}) => (!ac || o.account===ac || o.account2===ac) && (!cu || o.cur===cu || o.cur2===cu) && Math.abs(+o.amount)>=mn &&
+        (!q || [o.note, o.account, o.account2].join(' ').toLowerCase().includes(q)));
+    nTr = trs.length; rows.push(...trs); rows.sort((x, y) => y.day - x.day || ((y.o && y.o.createdAt) || '').localeCompare((x.o && x.o.createdAt) || ''));
+  }
+  $('#oSummary').textContent = `${OPS(rows.length)} · разом ${fmt(sum)}` + (kind==='exp'?' (витрати зі знаком мінус)':'') + (nTr ? ` · з них переказів ${nTr}` : '');
   let h = '<thead><tr><th>Дата</th><th>Категорія</th><th>Рахунок</th><th>Нотатка, мітки</th><th class="n">Списано</th><th class="n">В '+SYM()+'</th><th class="n" title="Розподілити покупку на кілька місяців у графіках і бюджеті">Врахувати за</th></tr></thead><tbody>';
   rows.slice(0,S.opsShown).forEach(t => {
+    if (t.tr){ const o = t.o, adj = o.type==='adj';
+      h += `<tr class="op-tr"><td class="mono" style="white-space:nowrap">${dayStr(t.day)}</td><td>${adj ? 'Виправлення залишку' : 'Переказ'}<div class="muted" style="font-size:.78rem">не входить у доходи й витрати</div>${adj ? '' : `<button class="linkbtn ops-edit" type="button" data-id="${o.id}">змінити</button>`}</td>
+        <td>${adj ? esc(o.account) : esc(o.account) + ' → ' + esc(o.account2)}</td><td style="min-width:160px">${esc(o.note || '')}</td>
+        <td class="n">${(adj && +o.amount>0 ? '+' : '') + fmtN(+o.amount, 2)}<span class="cur">${o.cur}</span>${!adj && o.amount2!=null && (o.cur2 || o.cur)!==o.cur ? `<div class="muted" style="font-size:.78rem">→ ${fmtN(+o.amount2, 2)}<span class="cur">${o.cur2}</span></div>` : ''}</td><td class="n muted">—</td><td></td></tr>`;
+      return; }
     const k2 = t.amt2!=null && t.cur2 ? `<div class="muted" style="font-size:.78rem">${fmtN(t.amt2,2)}<span class="cur">${t.cur2}</span> у категорії</div>` + (t.convFixed ? `<div style="font-size:.72rem;color:var(--warn)">⚠ CoinKeeper не перерахував суму в категорії, взято курс</div>` : '') : '';
     const asis = S.cur==='EUR' ? t.eurAsis : t.usdAsis;
     const tgt = S.cur==='EUR' ? 'EUR' : 'USD', rt = rateOn(t.day,tgt)/rateOn(t.day,t.cur);
@@ -1772,8 +1788,16 @@ function renderPocket(){
   // accounts
   const A = pkAccountBalances(), aTot = A.reduce((s,a)=>s+pkToDisp(a.bal,a.cur),0);
   $('#pkAcctTotal').textContent = `усього ${fmt(aTot)} · у фондах ${fmt(Math.max(0,fTot))}${cushCfg() ? ' · у подушці ' + fmt(cushUSD()*budK()) : ''}`;
-  $('#pkAccts').innerHTML = A.filter(a => Math.abs(a.bal) >= 0.5 || a.keep).map(a => `<div class="pk-li" data-acc="${esc(a.name)}"><div class="nm">${esc(a.name)}<small>${a.cur}</small></div>
-    <div class="fig">${fmtN(a.bal,2)} ${a.cur}<small><button class="linkbtn pk-fix" type="button" data-acc="${esc(a.name)}">виправити залишок</button></small></div></div>`).join('');
+  { // accounts with no movement for 3 months go under a fold
+    const since = isoOfDay(dayOfISO(todayISO()) - 92), moved = new Set();
+    PK.forEach(o => { if ((o.date||'') >= since){ moved.add(o.account); if (o.account2) moved.add(o.account2); } });
+    TX.forEach(t => { if (isoOfDay(t.day) >= since) moved.add(t.acct); });
+    const vis = A.filter(a => Math.abs(a.bal) >= 0.5 || a.keep), act = vis.filter(a => moved.has(a.name)), quiet = vis.filter(a => !moved.has(a.name));
+    const row = a => `<div class="pk-li" data-acc="${esc(a.name)}"><div class="nm">${esc(a.name)}<small>${a.cur}</small></div>
+    <div class="fig">${fmtN(a.bal,2)} ${a.cur}<small><button class="linkbtn pk-fix" type="button" data-acc="${esc(a.name)}">виправити залишок</button></small></div></div>`;
+    const qTot = quiet.reduce((s,a) => s + pkToDisp(a.bal, a.cur), 0);
+    $('#pkAccts').innerHTML = act.map(row).join('') + (quiet.length ? `<details class="pk-quiet"><summary>ще ${quiet.length} · без руху 3 місяці · ${fmt(qTot)}</summary>${quiet.map(row).join('')}</details>` : '');
+  }
   $('#pkAccts').querySelectorAll('.pk-fix').forEach(b => b.onclick = () => pkFixBalance(b.dataset.acc));
   $('#pkFunds').querySelectorAll('.pk-ffix').forEach(b => b.onclick = () => pkFixFund(b.dataset.g));
   renderRec();
