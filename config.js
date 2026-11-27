@@ -32,12 +32,13 @@ window.APP_CONFIG = {
   //   role:   'regular' — звичайна з місячним лімітом; 'want' — забаганка; 'fund' — фонд (накопичується й витрачається з накопиченого)
   //   bucket: 'fixed' — постійні витрати, 'free' — витрати без почуття провини (для схеми Раміта Сеті)
   //   color:  1–7 — колір на графіках для найбільших; без кольору категорія потрапить у «Решту»
+  //   bill:   true — обов’язковий платіж раз на місяць (оренда, підписки): без смуги темпу, лише «сплачено / чекає»
   //   goal:   фонд може мати ціль: { target, by: 'РРРР-ММ', every: місяців до повтору, what: 'на що' }
   categories: [
-    { name: 'Житло',            role: 'regular', bucket: 'fixed', color: 1, budget: 1000 },
+    { name: 'Житло',            role: 'regular', bucket: 'fixed', color: 1, budget: 1000, bill: true },
     { name: 'Їжа',              role: 'regular', bucket: 'fixed', color: 2, budget: 600 },
     { name: 'Транспорт',        role: 'regular', bucket: 'fixed', color: 3, budget: 120 },
-    { name: 'Зв’язок і підписки', role: 'regular', bucket: 'fixed', budget: 50 },
+    { name: 'Зв’язок і підписки', role: 'regular', bucket: 'fixed', budget: 50, bill: true },
     { name: 'Дім і побут',      role: 'regular', bucket: 'fixed', budget: 80 },
     { name: 'Кафе',             role: 'want',    bucket: 'free',  color: 4, budget: 150 },
     { name: 'Розваги',          role: 'want',    bucket: 'free',  budget: 80 },

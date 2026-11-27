@@ -188,6 +188,7 @@ section.pk{max-width:560px;margin:0 auto;padding-bottom:84px}
 .pk-pie li b{font-weight:500;font-family:var(--f-mono);font-variant-numeric:tabular-nums}
 .pk-pie li .am{color:var(--muted);font-family:var(--f-mono);font-size:.76rem;text-align:right;font-variant-numeric:tabular-nums}
 .pkb .bar .fill.want{background:var(--s2)}
+.bill-st{display:inline-block;width:1.2em;color:var(--muted)}.bill-st.ok{color:var(--good)}
 .pkb .sub{font-size:.76rem;color:var(--muted);margin-top:3px;line-height:1.45}
 .pk-w{justify-items:center;text-align:center}
 .pk-w[aria-pressed=true]{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
@@ -1008,8 +1009,10 @@ function renderBudget(){
   const isFund = g => wantOfKey(g)==null && roleOf(g)==='fund';
   const fundLeft = Object.keys({...B, ...spent}).filter(isFund).reduce((s,g) => s + (+B[g]||0) - (spent[g]||0), 0);
   const left = totB - totS - fundLeft;   // funds are already put aside, they are not money to spend this month
+  const billG = Object.keys({...B, ...spent}).filter(g => wantOfKey(g)==null && isBill(g));
+  const billB = billG.reduce((s,g) => s + (+B[g]||0), 0), billS = billG.reduce((s,g) => s + (spent[g]||0), 0), billWait = billG.reduce((s,g) => s + Math.max(0, (+B[g]||0) - (spent[g]||0)), 0);
   if (has){
-    const st = totS > totB ? [overSev(totS,totB,false)==='soft' ? 'warn' : 'crit','Перевитрата'] : totS > totB*pace*1.05 && pace<1 ? ['warn','Витрачаємо швидше за план'] : ['good', pace<1 ? 'Ідемо за планом' : 'Вклалися'];
+    const st = totS > totB ? [overSev(totS,totB,false)==='soft' ? 'warn' : 'crit','Перевитрата'] : (totS - billS) > (totB - billB)*pace*1.05 && pace<1 ? ['warn','Витрачаємо швидше за план'] : ['good', pace<1 ? 'Ідемо за планом' : 'Вклалися'];
     $('#budStatus').innerHTML = `<span class="pill ${st[0]}">${st[1]}</span>`;
     const inc = (+budget.income || 0)*kB, sav = (+budget.savings || 0)*kB;
     $('#budSum').innerHTML = `
@@ -1018,7 +1021,7 @@ function renderBudget(){
       <div><div class="eyebrow">${left>=0?'Можна ще витратити':'Перевитрата'}</div><div class="v" style="color:var(${left>=0?'--good':'--warn'})">${fmt(Math.abs(left))}</div>${fundLeft>0.5 ? `<div class="note">звичайні витрати й забаганки · ще ${fmt(fundLeft)} лежить у фондах</div>` : '<div class="note">звичайні витрати й забаганки</div>'}</div>
       <div><div class="eyebrow">Відкладаємо</div><div class="v">${fmt(sav)}</div><div class="note">${inc? fmtN(sav/inc*100,0)+'% від доходу '+fmt(inc):''}</div></div>`;
     const now = new Date(), daysLeft = new Date(now.getFullYear(), now.getMonth()+1, 0).getDate() - now.getDate() + 1;
-    $('#budPaceNote').textContent = pace<1 && pace>0 ? `Минуло ${fmtN(pace*100,0)}% місяця, витрачено ${fmtN(totB?totS/totB*100:0,0)}% бюджету. До кінця місяця ${daysLeft} дн.: можна витрачати близько ${fmt(Math.max(0,left)/daysLeft)} на день.` : (pace===0 ? 'Місяць ще не почався.' : budgetMonth()===now.getFullYear()*12+now.getMonth() ? `Сьогодні останній день місяця: витрачено ${fmtN(totB?totS/totB*100:0,0)}% бюджету.` : `Місяць закрито: ${fmtN(totB?totS/totB*100:0,0)}% бюджету.`);
+    $('#budPaceNote').textContent = pace<1 && pace>0 ? `Минуло ${fmtN(pace*100,0)}% місяця, витрачено ${fmtN(totB?totS/totB*100:0,0)}% бюджету. До кінця місяця ${daysLeft} дн.: можна витрачати близько ${fmt(Math.max(0,left - billWait)/daysLeft)} на день.` : (pace===0 ? 'Місяць ще не почався.' : budgetMonth()===now.getFullYear()*12+now.getMonth() ? `Сьогодні останній день місяця: витрачено ${fmtN(totB?totS/totB*100:0,0)}% бюджету.` : `Місяць закрито: ${fmtN(totB?totS/totB*100:0,0)}% бюджету.`);
   } else $('#budStatus').innerHTML = '';
 
   renderDonut(B, spent, pace, avg);
@@ -1465,6 +1468,8 @@ function renderOpsTransfers(){   // transfers between own accounts and balance c
 // each month, once its day has come, the pocket writes pocketTx/rec-<id>-<YYYY-MM> (fixed id: two phones never double it)
 let PKREC = [], pkTxLoaded = false, pkRecBusy = false, pkRecEditing = null;
 const daysIn = ym => new Date(Math.floor(ym/12), ym%12 + 1, 0).getDate();
+const recActive = (r, ym) => { const k = ymKey(ym); return (!r.from || r.from <= k) && (!r.until || k <= r.until) && !(r.skip || []).includes(k); };
+const recLeft = (r, ym) => r.until ? Math.max(0, ymOfKey(r.until) - ym + 1) : null;   // payments from ym to the last one
 const recDate = (r, ym) => `${Math.floor(ym/12)}-${String(ym%12+1).padStart(2,'0')}-${String(Math.min(+r.day||1, daysIn(ym))).padStart(2,'0')}`;
 async function pkRunRecurring(){
   if (!db || !pkTxLoaded || !PKCFG || pkRecBusy) return;
@@ -1475,6 +1480,7 @@ async function pkRunRecurring(){
       const acc = (PKCFG.accounts || []).find(a => a.name===r.account); if (!acc || !(+r.amount > 0)) continue;
       for (let ym = ymOfKey(r.from || ymKey(nowYM())); ym <= nowYM(); ym++){
         const key = ymKey(ym), date = recDate(r, ym);
+        if (r.until && key > r.until) break;
         if (date > today || (r.skip || []).includes(key) || PK.some(o => o.recurId===r.id && o.recurMonth===key)) continue;
         await db.doc(`pocketTx/rec-${r.id}-${key}`).set({type:'exp', date, account:r.account, cur:acc.cur, amount:+r.amount, group:r.group, who:r.who || 'спільні',
           tags:[], note:r.name || '', recurId:r.id, recurMonth:key, createdAt:new Date().toISOString()});
@@ -1490,7 +1496,8 @@ function renderRec(){
   box.innerHTML = PKREC.length ? PKREC.slice().sort((a,b) => (+a.day||0) - (+b.day||0)).map(r => {
       const a = ((PKCFG && PKCFG.accounts) || []).find(x => x.name===r.account), cur = a ? a.cur : '';
       const ym = recDate(r, nowYM()) >= todayISO() ? nowYM() : nowYM() + 1;
-      return `<div class="pk-li"><div class="nm">${esc(r.name || r.group)}<small>${esc(r.group)} · ${esc(r.account)} · щомісяця ${+r.day}-го · наступний ${recDate(r, ym).split('-').reverse().join('.')}</small></div>
+      const end = r.until ? ` · останній — ${esc(ymLong(ymOfKey(r.until)))} (ще ${recLeft(r, ym)})` : '';
+      return `<div class="pk-li"><div class="nm">${esc(r.name || r.group)}<small>${esc(r.group)} · ${esc(r.account)} · щомісяця ${+r.day}-го · наступний ${recDate(r, ym).split('-').reverse().join('.')}${end}</small></div>
         <div class="fig">${fmtN(+r.amount, 2)} ${cur}<small><button class="linkbtn rec-edit" type="button" data-id="${r.id}">змінити</button> · <button class="linkbtn rec-del" type="button" data-id="${r.id}">видалити</button></small></div></div>`; }).join('')
     : '<p class="note">Поки немає. Додайте оренду, підписки, курси — «Кишенька» вноситиме їх сама в потрібний день.</p>';
   box.querySelectorAll('.rec-edit').forEach(b => b.onclick = () => openRecForm(PKREC.find(r => r.id===b.dataset.id)));
@@ -1505,17 +1512,19 @@ function openRecForm(r){
     <label>Що це<input type="text" id="recName" value="${esc(v.name || '')}" placeholder="наприклад, курс з маркетингу" maxlength="60"></label>
     <div class="row2"><label>Сума<input type="text" inputmode="decimal" id="recAmt" value="${v.amount}"></label>
       <label>Число місяця<input type="text" inputmode="numeric" id="recDay" value="${v.day}"></label></div>
+    <div class="row2"><label>З місяця<input type="month" id="recFrom" value="${v.from || ymKey(nowYM())}"></label>
+      <label>Останній місяць<input type="month" id="recUntil" value="${v.until || ''}"></label></div>
     <label>Рахунок<select id="recAcct">${accs.map(a => `<option${a===v.account?' selected':''}>${esc(a)}</option>`).join('')}</select></label>
     <div class="row2"><label>Категорія<select id="recCat">${cats.map(g => `<option${g===v.group?' selected':''}>${esc(g)}</option>`).join('')}</select></label>
       <label>Чия<select id="recWho">${WHO.map(w => `<option value="${esc(w)}"${w===v.who?' selected':''}>${w==='спільні' ? 'спільна' : esc(w)}</option>`).join('')}</select></label></div>
-    <p class="note">Платіж вноситься сам цього дня місяця (якщо в місяці менше днів — в останній). Видалений вручну за якийсь місяць більше не з’явиться.</p>
+    <p class="note">Платіж вноситься сам цього дня місяця (якщо в місяці менше днів — в останній). Видалений вручну за якийсь місяць більше не з’явиться. Останній місяць — для розстрочок; порожньо — без кінця.</p>
     <div class="row" style="gap:8px"><button class="btn primary" type="button" id="recSave">Зберегти</button><button class="btn" type="button" id="recCancel">Скасувати</button><span class="status-line" id="recMsg"></span></div></div>`;
   f.hidden = false; $('#pkRecAdd').hidden = true; $('#pkRecBox').open = true; $('#recName').focus();
   $('#recCancel').onclick = () => { f.hidden = true; f.innerHTML = ''; $('#pkRecAdd').hidden = false; };
   $('#recSave').onclick = async () => {
     const amount = Math.round((parseFloat($('#recAmt').value.replace(',', '.')) || 0)*100)/100, day = Math.min(31, Math.max(1, parseInt($('#recDay').value) || 1));
     const doc = {name: $('#recName').value.trim(), amount, day, account: $('#recAcct').value, group: $('#recCat').value, who: $('#recWho').value,
-      from: pkRecEditing ? pkRecEditing.from : ymKey(nowYM()), skip: pkRecEditing ? (pkRecEditing.skip || []) : [], updatedAt: new Date().toISOString()};
+      from: $('#recFrom').value || (pkRecEditing ? pkRecEditing.from : ymKey(nowYM())), until: $('#recUntil').value || null, skip: pkRecEditing ? (pkRecEditing.skip || []) : [], updatedAt: new Date().toISOString()};
     if (!doc.name || !(amount > 0) || !doc.account){ $('#recMsg').textContent = 'Заповніть назву, суму й рахунок.'; return; }
     try { if (pkRecEditing) await db.doc('recurring/' + pkRecEditing.id).set(doc); else await db.collection('recurring').add(doc);
       f.hidden = true; f.innerHTML = ''; $('#pkRecAdd').hidden = false; } catch(e){ $('#recMsg').textContent = e.message || e.code; }
@@ -1534,7 +1543,10 @@ const PK_FUND_DEFAULT = (CFG.categories||[]).filter(c => c.role==='fund').map(c 
 const PK_WANT_DEFAULT = (CFG.categories||[]).filter(c => c.role==='want').map(c => c.name);
 const PK_ALLOW_DEFAULT = CFG.allowances || {'спільні':150};   // USD per month
 const WHO = ['спільні', ...PEOPLE];
+const PK_BILL_DEFAULT = (CFG.categories||[]).filter(c => c.bill).map(c => c.name);
 const roleOf = g => (budget && budget.roles && budget.roles[g]) || (PK_FUND_DEFAULT.includes(g) ? 'fund' : PK_WANT_DEFAULT.includes(g) ? 'want' : 'regular');
+// bills: paid once a month (rent, subscriptions) — no pace, shown as paid / expected
+const isBill = g => roleOf(g)==='regular' && ((budget && budget.bills) || PK_BILL_DEFAULT).includes(g);
 const allowOf = w => { const a = budget && budget.allowances; return (a && a[w]!=null) ? +a[w] : PK_ALLOW_DEFAULT[w]; };
 const dayOfISO = s => Math.round((Date.parse(s+'T00:00:00Z') - BASE)/DAY);
 const todayISO = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; };
@@ -1836,7 +1848,8 @@ function catPanel(g, ym){
   const noTag = tagOf({tags:[]}), tot = rows.reduce((s,t) => s + V(t), 0) || 1;
   const ok = ps => ps.length >= 2 && ps[0].v/tot < 0.85 && (ps.find(x => x.name===noTag)?.v || 0)/tot < 0.5;
   const ps = [sliceParts(rows, tagOf), sliceParts(rows, t => whoLabel(txWho(t))), sliceParts(rows, t => t.acct || '—')].find(ok) || [];
-  return `<div class="pk-open">${slicePie(ps)}${opsList(rows, false)}</div>`;
+  const tgl = roleOf(g)==='regular' ? `<p class="note" style="margin:8px 0 0"><button class="linkbtn bill-tgl" type="button" data-g="${esc(g)}">${isBill(g) ? 'це поступова витрата — показувати зі смугою' : 'це обов’язковий платіж — показувати в «Обов’язкових платежах»'}</button></p>` : '';
+  return `<div class="pk-open">${slicePie(ps)}${opsList(rows, false)}${tgl}</div>`;
 }
 let pkWantOpen = null;
 function renderWantList(W){
@@ -1921,7 +1934,30 @@ function renderPkMonth(paceNow){
   const tap = g => ({cls: 'tap' + (pkCatOpen===g ? ' open' : ''), attrs: ` data-cat="${esc(g)}"`});
   const panel = g => pkCatOpen===g ? catPanel(g, ym) : '';
   let h = '';
-  groups.filter(g => roleOf(g)==='regular').forEach((g, n) => {
+  { // bills: paid once a month — no pace, just paid or still expected; recurring payments of other categories too
+    const key = ymKey(ym), recs = PKREC.filter(r => recActive(r, ym));
+    const recPaid = r => PK.find(o => o.recurId===r.id && o.recurMonth===key);
+    const recAmt = r => { const a = ((PKCFG && PKCFG.accounts) || []).find(x => x.name===r.account); return a ? pkToDisp(+r.amount, a.cur) : 0; };
+    const dm = iso => iso.split('-').reverse().slice(0,2).join('.');
+    let rows = '', paidSum = 0, waitSum = 0;
+    groups.filter(isBill).forEach(g => {
+      const b = ((+G[g]||0) + (adj.groups[g]||0))*kB, sp = spent[g]||0, pend = recs.filter(r => r.group===g && !recPaid(r)), pendAmt = pend.reduce((s,r) => s + recAmt(r), 0);
+      const done = sp >= 0.5 && !pend.length, waitAmt = sp >= 0.5 ? pendAmt : Math.max(b, pendAmt);
+      paidSum += sp; waitSum += waitAmt;
+      const sub = [b ? `бюджет ${fmt(b)}` : null, ...pend.map(r => `чекає ${esc(r.name || g)} ${dm(recDate(r, ym))} · ${fmt(recAmt(r))}`)].filter(Boolean).join(' · ');
+      rows += barRow({...tap(g), name: `<span class="bill-st${done ? ' ok' : ''}">${done ? '✓' : '○'}</span>${esc(g)}`, noBar: true,
+        right: sp >= 0.5 ? `<small>сплачено</small>${fmt(sp)}` : `<small>чекає</small>${fmt(waitAmt)}`, rtColor: b && sp > b + 0.5 ? '--crit' : '--ink', sub}) + panel(g);
+    });
+    recs.filter(r => !isBill(r.group)).sort((a,b) => (+a.day||0) - (+b.day||0)).forEach(r => {
+      const o = recPaid(r), v = o ? pkToDisp(+o.amount, o.cur) : recAmt(r), n = recLeft(r, ym);
+      if (o) paidSum += v; else waitSum += v;
+      rows += barRow({name: `<span class="bill-st${o ? ' ok' : ''}">${o ? '✓' : '○'}</span>${esc(r.name || r.group)}`, noBar: true,
+        right: `<small>${o ? 'сплачено' : 'чекає'}</small>${fmt(v)}`,
+        sub: [esc(r.group), `${o ? 'сплачено' : 'чекає'} ${dm(o ? o.date : recDate(r, ym))}`, n != null ? `лишилося платежів: ${n - (o ? 1 : 0)}` : null].filter(Boolean).join(' · ')});
+    });
+    if (rows) h += `<div class="pk-sec">Обов’язкові платежі <span class="pk-sec-hint">· сплачено ${fmt(paidSum)}${waitSum >= 0.5 ? ' · чекає ' + fmt(waitSum) : ''}</span></div>` + rows;
+  }
+  groups.filter(g => roleOf(g)==='regular' && !isBill(g)).forEach((g, n) => {
     if (!n) h += `<div class="pk-sec">Звичайні витрати</div>`;
     const sp = spent[g]||0;
     const b = ((+G[g]||0) + (adj.groups[g]||0))*kB, r = b - sp;
@@ -1949,6 +1985,8 @@ function renderPkMonth(paceNow){
   const box = $('#pkMonth'); box.innerHTML = h || '<p class="note">Цього місяця операцій немає.</p>';
   box.querySelectorAll('.pkb[data-cat]').forEach(r => r.onclick = () => { pkCatOpen = pkCatOpen===r.dataset.cat ? null : r.dataset.cat; renderPkMonth(paceNow); });
   box.querySelectorAll('.wl-edit').forEach(b => b.onclick = e => { e.stopPropagation(); pkEdit(b.dataset.id); });
+  box.querySelectorAll('.bill-tgl').forEach(b => b.onclick = async () => { const g = b.dataset.g, cur = (budget && budget.bills) || PK_BILL_DEFAULT;
+    await saveBudgetPatch({bills: cur.includes(g) ? cur.filter(x => x!==g) : [...cur, g]}); renderPkMonth(paceNow); });
 }
 
 /* ---- entry form ---- */

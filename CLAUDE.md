@@ -3,7 +3,7 @@
 Інтерфейс, документація й комунікація з людиною — українською.
 
 ## Якщо людина просить «зроби мені такий бюджет»
-1. Постав запитання й заповни `config.js` (структуру не змінюй): хто веде бюджет (`people`, `peopleGenitive`), валюти рахунків і базова валюта курсів (`currencies`, `rateBase`, `rates`), дохід, скільки відкладати, подушка (ціль 3–6 місяців обов’язкових витрат; `overflow` — фонд-ціль), категорії з ролями `regular`/`want`/`fund`, кошиками `fixed`/`free`, бюджетами в USD/міс і цілями фондів, ліміти забаганок (`allowances`, ключ спільної частини — `'спільні'`). Якщо людина дала вивантаження витрат — візьми бюджети із середніх.
+1. Постав запитання й заповни `config.js` (структуру не змінюй): хто веде бюджет (`people`, `peopleGenitive`), валюти рахунків і базова валюта курсів (`currencies`, `rateBase`, `rates`), дохід, скільки відкладати, подушка (ціль 3–6 місяців обов’язкових витрат; `overflow` — фонд-ціль), категорії з ролями `regular`/`want`/`fund`, кошиками `fixed`/`free`, позначкою `bill` для обов’язкових платежів (оренда, підписки), бюджетами в USD/міс і цілями фондів, ліміти забаганок (`allowances`, ключ спільної частини — `'спільні'`). Якщо людина дала вивантаження витрат — візьми бюджети із середніх.
 2. Покажи config людині коротко (таблиця категорій і сум), виправ за відповіддю.
 3. Опублікуй як артефакт Claude: сторінка `index.html`, файли `files: {"config.js": ..., "firebase-config.js": ...}` (firebase-config залиш незаповненим), `capabilities: {db: {}, downloads: true}`. Усередині артефакту сторінка сама бере базу артефакту (`window.claude.use('db')`), вхід не потрібен. Бюджет із config запишеться в базу під час першого відкриття.
 4. Скажи: відкрити посилання → «Дані → Налаштування» → додати рахунки із залишками й курси → «Зберегти»; на телефоні — «На екран „Додому“»; поділитися артефактом із партнером, щоб вести вдвох; раз на місяць завантажувати резервну копію.
@@ -23,12 +23,12 @@
 ## Дані в базі
 | Шлях | Що |
 |---|---|
-| `budget/plan` | `groups` (USD/міс), `income`, `savings`, `buckets`, `roles`, `goals` `{target, by:'YYYY-MM', every, what}`, `cushion` `{start, target, overflow}`, `allowances` |
+| `budget/plan` | `groups` (USD/міс), `income`, `savings`, `buckets`, `roles`, `goals` `{target, by:'YYYY-MM', every, what}`, `cushion` `{start, target, overflow}`, `allowances`, `bills` (категорії — обов’язкові платежі; типово з `bill: true` у config) |
 | `pocket/config` | `accounts[{name,cur,start}]`, `startDate`, `firstMonth`, `rates` (одиниць `rateBase` за 1 одиницю валюти) |
 | `pocketTx/*` | операції: `{type: exp/inc/tr/adj, date, amount, cur, account, account2, amount2, group, tags, who, note, eur, createdAt, editedAt}`; редагування — `pkEdit(id)` відкриває форму з даними операції й перезаписує той самий документ; `who` — ім’я людини або `'спільні'` |
 | `pocketFunds/*` | розкладання (`YYYY-MM`), закриття місяців (`close-YYYY-MM`), виправлення (`adj-*`): `{funds:{group:usd}, savings:usd}` |
 | `spread/*` | на скільки місяців розмазати операцію |
-| `recurring/*` | регулярні платежі `{name, account, amount, group, who, day, from, skip[]}`; «Кишенька» сама пише `pocketTx/rec-<id>-<YYYY-MM>` (`pkRunRecurring`) |
+| `recurring/*` | регулярні платежі й розстрочки `{name, account, amount, group, who, day, from, until, skip[]}` (`until` — останній місяць `YYYY-MM`); «Кишенька» сама пише `pocketTx/rec-<id>-<YYYY-MM>` (`pkRunRecurring`) |
 | `budgetAdj/<YYYY-MM>` | перекидання між категоріями на місяць `{moves:[{from, to, usd}]}`; `w:<хто>` — забаганки людини (`adjFor`) |
 | `meta/backup` | дата останньої резервної копії |
 
