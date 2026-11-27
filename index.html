@@ -43,7 +43,7 @@ button,select,input{font:inherit;color:inherit}
 :focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 
 /* header */
-header.top{background:var(--surface);border-bottom:1px solid var(--line);position:sticky;top:env(safe-area-inset-top,0px);z-index:5}
+header.top{background:var(--surface);border-bottom:1px solid var(--line);position:sticky;top:calc(env(safe-area-inset-top,0px) - var(--hh,0px));z-index:5}
 .head-row{display:flex;flex-wrap:wrap;align-items:center;gap:10px 18px;padding-block:14px 10px}
 .head-row .sub{font-size:.8rem;color:var(--muted)}
 .filters{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-left:auto}
@@ -188,6 +188,8 @@ section.pk{max-width:560px;margin:0 auto;padding-bottom:84px}
 .pk-pie li b{font-weight:500;font-family:var(--f-mono);font-variant-numeric:tabular-nums}
 .pk-pie li .am{color:var(--muted);font-family:var(--f-mono);font-size:.76rem;text-align:right;font-variant-numeric:tabular-nums}
 .pkb .bar .fill.want{background:var(--s2)}
+.pk-billhead{cursor:pointer;display:flex;align-items:baseline;gap:6px;margin-top:18px}.pk-billhead .chev{margin-left:auto;color:var(--muted)}
+.pk-allocdone .note{margin:0 0 10px}
 .bill-st{display:inline-block;width:1.2em;color:var(--muted)}.bill-st.ok{color:var(--good)}
 .pkb .sub{font-size:.76rem;color:var(--muted);margin-top:3px;line-height:1.45}
 .pk-w{justify-items:center;text-align:center}
@@ -359,6 +361,7 @@ select.spr{font-size:.78rem;background:var(--surface-2);border:1px solid var(--l
       </div>
       <details class="card pk-fold" id="pkFundsBox">
         <summary><h2>Фонди</h2><span class="note" id="pkFundsTotal"></span></summary>
+        <div id="pkAllocDone" class="pk-allocdone"></div>
         <div id="pkFunds"></div>
       </details>
       <details class="card pk-fold" id="pkRecBox">
@@ -1692,13 +1695,13 @@ function renderClose(){
 function renderAlloc(){
   renderClose();
   const ym = nowYM(), key = ymKey(ym), done = PKALLOC[key], k = budK(), plan = pkPlanAlloc(), month = MONTHS_FULL[ym%12];
-  const el = $('#pkAllocCard');
+  const top = $('#pkAllocCard'), low = $('#pkAllocDone'), el = done ? low : top;   // done → a quiet line in «Фонды»
+  (done ? top : low).innerHTML = ''; top.hidden = !!done;
   const src = done ? {funds: done.funds||{}, savings: +done.savings||0} : plan;
   const groups = [...new Set([...Object.keys(plan.funds), ...Object.keys(src.funds)])].sort((a,b)=>(plan.funds[b]||src.funds[b]||0)-(plan.funds[a]||src.funds[a]||0));
   const total = Object.values(src.funds).reduce((s,v)=>s+(+v||0),0)*k + src.savings*k;
   if (done && !pkAllocEdit){
-    el.innerHTML = `<div class="row"><h2>Відкладено на ${month}</h2><span class="pill good">готово</span></div>
-      <p class="note">${fmt(total - src.savings*k)} розкладено по фондах${src.savings ? ' і ' + fmt(src.savings*k) + ' — у подушку' : ''}. <button class="linkbtn" id="pkAllocChange" type="button">змінити суми</button> · <button class="linkbtn" id="pkUndo" type="button">скасувати</button></p>`;
+    el.innerHTML = `<p class="note">${month[0].toUpperCase() + month.slice(1)}: ${fmt(total - src.savings*k)} розкладено по фондах${src.savings ? ' і ' + fmt(src.savings*k) + ' — у подушку' : ''}. <button class="linkbtn" id="pkAllocChange" type="button">змінити суми</button> · <button class="linkbtn" id="pkUndo" type="button">скасувати</button></p>`;
     $('#pkAllocChange').onclick = () => { pkAllocEdit = true; renderAlloc(); };
     $('#pkUndo').onclick = async e => { const b = e.target; if (!b.dataset.armed){ b.dataset.armed = 1; b.textContent = 'точно скасувати?'; setTimeout(()=>{ delete b.dataset.armed; b.textContent='скасувати'; }, 4000); return; }
       try { await db.doc('pocketFunds/' + key).delete(); } catch(err){ showErr(err.message||err.code); } };
@@ -1814,7 +1817,7 @@ function barRow(o){
     <div class="ft">${ft}</div>`}${o.sub ? `<div class="sub">${o.sub}</div>` : ''}</div>`;
 }
 /* ---- what is inside a category or someone's wants: a small donut with shares, then the operations ---- */
-let pkCatOpen = null;
+let pkCatOpen = null, pkBillsOpen = lsGet('pkBillsOpen') === true;
 const SLICE = ['--s1','--s2','--s3','--s4','--s5','--s6','--s7'];
 const whoLabel = w => w===WHO[0] ? 'спільні' : w;
 function sliceParts(rows, keyFn){
@@ -1934,6 +1937,7 @@ function renderPkMonth(paceNow){
   const tap = g => ({cls: 'tap' + (pkCatOpen===g ? ' open' : ''), attrs: ` data-cat="${esc(g)}"`});
   const panel = g => pkCatOpen===g ? catPanel(g, ym) : '';
   let h = '';
+  let billsH = '';
   { // bills: paid once a month — no pace, just paid or still expected; recurring payments of other categories too
     const key = ymKey(ym), recs = PKREC.filter(r => recActive(r, ym));
     const recPaid = r => PK.find(o => o.recurId===r.id && o.recurMonth===key);
@@ -1955,7 +1959,7 @@ function renderPkMonth(paceNow){
         right: `<small>${o ? 'сплачено' : 'чекає'}</small>${fmt(v)}`,
         sub: [esc(r.group), `${o ? 'сплачено' : 'чекає'} ${dm(o ? o.date : recDate(r, ym))}`, n != null ? `лишилося платежів: ${n - (o ? 1 : 0)}` : null].filter(Boolean).join(' · ')});
     });
-    if (rows) h += `<div class="pk-sec">Обов’язкові платежі <span class="pk-sec-hint">· сплачено ${fmt(paidSum)}${waitSum >= 0.5 ? ' · чекає ' + fmt(waitSum) : ''}</span></div>` + rows;
+    if (rows) billsH = `<div class="pk-sec pk-billhead" role="button" tabindex="0" aria-expanded="${pkBillsOpen}">Обов’язкові платежі <span class="pk-sec-hint">· ${waitSum >= 0.5 ? 'сплачено ' + fmt(paidSum) + ' · чекає ' + fmt(waitSum) : 'усе сплачено ' + fmt(paidSum)}</span><span class="chev">${pkBillsOpen ? '▾' : '▸'}</span></div>` + (pkBillsOpen ? rows : '');
   }
   groups.filter(g => roleOf(g)==='regular' && !isBill(g)).forEach((g, n) => {
     if (!n) h += `<div class="pk-sec">Звичайні витрати</div>`;
@@ -1981,10 +1985,13 @@ function renderPkMonth(paceNow){
       sub: Math.abs(x.carry) >= 1 ? `${x.carry > 0 ? '+' : '−'}${fmt(Math.abs(x.carry))} з минулих міс.` : ''})
       + (pkCatOpen===key ? `<div class="pk-open">${x.rows.length ? slicePie(sliceParts(x.rows, t => t.group)) + opsList(x.rows, true) : '<p class="note">Цього місяця ще нічого.</p>'}</div>` : '');
   });
+  h += billsH;
   if (fundSpent > 0.5) h += `<p class="note" style="margin:10px 0 0">Ще ${fmt(fundSpent)} витрачено з фондів — по кожному фонду дивіться у «Фондах».</p>`;
   const box = $('#pkMonth'); box.innerHTML = h || '<p class="note">Цього місяця операцій немає.</p>';
   box.querySelectorAll('.pkb[data-cat]').forEach(r => r.onclick = () => { pkCatOpen = pkCatOpen===r.dataset.cat ? null : r.dataset.cat; renderPkMonth(paceNow); });
   box.querySelectorAll('.wl-edit').forEach(b => b.onclick = e => { e.stopPropagation(); pkEdit(b.dataset.id); });
+  const bh = box.querySelector('.pk-billhead'); if (bh) bh.onclick = bh.onkeydown = e => { if (e.type==='keydown' && e.key!=='Enter' && e.key!==' ') return; e.preventDefault();
+    pkBillsOpen = !pkBillsOpen; lsSet('pkBillsOpen', pkBillsOpen); renderPkMonth(paceNow); };
   box.querySelectorAll('.bill-tgl').forEach(b => b.onclick = async () => { const g = b.dataset.g, cur = (budget && budget.bills) || PK_BILL_DEFAULT;
     await saveBudgetPatch({bills: cur.includes(g) ? cur.filter(x => x!==g) : [...cur, g]}); renderPkMonth(paceNow); });
 }
@@ -2162,6 +2169,8 @@ function applyData(data){
 }
 function wire(){
   window.addEventListener('hashchange', () => { render(); window.scrollTo({top:0}); });
+  const setHH = () => { const r = document.querySelector('.head-row'); document.documentElement.style.setProperty('--hh', (r ? r.offsetHeight : 0) + 'px'); };
+  setHH(); window.addEventListener('resize', setHH); if (window.ResizeObserver){ const r = document.querySelector('.head-row'); if (r) new ResizeObserver(setHH).observe(r); }
   const setCur = c => { S.cur = c; lsSet('cur', c); $('#cUSD').setAttribute('aria-pressed', c==='USD'); $('#cEUR').setAttribute('aria-pressed', c==='EUR'); draft = null; render(); };
   $('#cUSD').onclick = () => setCur('USD'); $('#cEUR').onclick = () => setCur('EUR');
   $('#cUSD').setAttribute('aria-pressed', S.cur==='USD'); $('#cEUR').setAttribute('aria-pressed', S.cur==='EUR');
