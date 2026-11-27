@@ -27,7 +27,7 @@
   --warn:#E5A35A; --warn-soft:#2D271F; --crit:#E07474; --crit-soft:#332223; --over-soft:#8DA9CC; --ok:#9DBE87;
   --s1:#6FA37D; --s2:#D8A7B8; --s3:#7790C6; --s4:#C9A867; --s5:#A897D8; --s6:#E2AE86; --s7:#5BA7A0; --s0:#514B5C; --s0b:#6E6A74; color-scheme:dark}
 *{box-sizing:border-box}
-body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.5}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.5;padding-top:env(safe-area-inset-top,0px)}
 body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--surface)}
 .wrap{max-width:1180px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
 h1,h2,h3{font-family:var(--f-display);font-weight:600;text-wrap:balance;margin:0;letter-spacing:-.01em}
@@ -324,7 +324,7 @@ select.spr{font-size:.78rem;background:var(--surface-2);border:1px solid var(--l
 <header class="top">
   <div class="wrap">
     <div class="head-row">
-      <div>
+      <div hidden>
         <h1 id="appTitle">Бюджет</h1>
         <div class="sub" id="dataStamp">Завантажую дані…</div>
       </div>
@@ -1989,10 +1989,13 @@ function renderPkMonth(paceNow){
         right: `<small>${o ? 'сплачено' : 'чекає'}</small>${fmt(v)}`,
         sub: [esc(r.group), `${o ? 'сплачено' : 'чекає'} ${dm(o ? o.date : recDate(r, ym))}`, n != null ? `лишилося платежів: ${n - (o ? 1 : 0)}` : null].filter(Boolean).join(' · ') + ` <button class="linkbtn rec-edit" type="button" data-id="${r.id}">змінити</button>`});
     });
-    if (rows){ const all = paidSum + waitSum;
+    const later = ym===cur ? PKREC.filter(r => r.from && r.from > key).sort((a,b) => a.from.localeCompare(b.from)).map(r => { const a = ((PKCFG && PKCFG.accounts) || []).find(x => x.name===r.account);
+      return `<div class="pk-li"><div class="nm">${esc(r.name || r.group)}<small>${esc(r.group)} · перший — ${esc(ymLong(ymOfKey(r.from)))}${r.until ? ' · ' + (recLeft(r, ymOfKey(r.from)) || 0) + ' ×' : ''}</small></div><div class="fig">${fmtN(+r.amount, 2)} ${a ? a.cur : ''}<small><button class="linkbtn rec-edit" type="button" data-id="${r.id}">змінити</button></small></div></div>`; }).join('') : '';
+    const laterH = later ? `<div class="pk-sec" style="margin-top:12px">Почнуться пізніше</div>${later}` : '';
+    if (rows || later){ const all = paidSum + waitSum;
       billsH = `<div class="pk-sec">Обов’язкові платежі</div>` + barRow({cls: 'tap pk-billhead' + (pkBillsOpen ? ' open' : ''), attrs: ` role="button" tabindex="0" aria-expanded="${pkBillsOpen}"`,
         name: 'усі платежі місяця', right: waitSum >= 0.5 ? `<small>чекає</small>${fmt(waitSum)}` : `<small>усе сплачено</small>`, pct: all ? paidSum/all*100 : 0,
-        atLabel: paidSum >= 0.5 ? fmt(paidSum) : null, endLabel: fmt(all)}) + (pkBillsOpen ? `<div class="pk-billrows">${rows}<p class="note" style="margin:8px 0 0"><button class="linkbtn" type="button" id="pkRecAdd2">+ регулярний платіж або розстрочка</button></p></div>` : ''); }
+        atLabel: paidSum >= 0.5 ? fmt(paidSum) : null, endLabel: fmt(all)}) + (pkBillsOpen ? `<div class="pk-billrows">${rows}${laterH}<p class="note" style="margin:8px 0 0"><button class="linkbtn" type="button" id="pkRecAdd2">+ регулярний платіж або розстрочка</button></p></div>` : ''); }
   }
   groups.filter(g => roleOf(g)==='regular' && !isBill(g)).forEach((g, n) => {
     if (!n) h += `<div class="pk-sec">Звичайні витрати</div>`;
